@@ -254,7 +254,7 @@ class _EditarPropietarioScreenState extends State<EditarPropietarioScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             decoration: BoxDecoration(
-                              color: colorScheme.surfaceVariant.withOpacity(0.3),
+                              color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: colorScheme.outline.withOpacity(0.3),
@@ -309,7 +309,7 @@ class _EditarPropietarioScreenState extends State<EditarPropietarioScreen> {
                               hintText: 'Ingresa nueva contraseña',
                               isDense: true,
                               filled: true,
-                              fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+                              fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -343,7 +343,7 @@ class _EditarPropietarioScreenState extends State<EditarPropietarioScreen> {
                               hintText: 'Confirma la nueva contraseña',
                               isDense: true,
                               filled: true,
-                              fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+                              fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -476,7 +476,7 @@ class _EditarPropietarioScreenState extends State<EditarPropietarioScreen> {
       decoration: BoxDecoration(
         color: isDark
             ? colorScheme.surface.withOpacity(0.5)
-            : colorScheme.surfaceVariant.withOpacity(0.2),
+            : colorScheme.surfaceContainerHighest.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: colorScheme.outline.withOpacity(0.2),

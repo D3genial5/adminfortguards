@@ -68,8 +68,8 @@ class _RegistrosActivosScreenState extends State<RegistrosActivosScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/scan-qr', extra: widget.guardiaData),
-        child: const Icon(Icons.qr_code_scanner),
         tooltip: 'Escanear QR',
+        child: const Icon(Icons.qr_code_scanner),
       ),
     );
   }
