@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:developer' as dev;
 import 'auth_service.dart';
 
@@ -201,24 +202,24 @@ class AdminFirestoreService {
           'fechaActualizacion': FieldValue.serverTimestamp(),
         });
         
-        print('✅ Credenciales actualizadas para: $email');
-        print('📄 Documento actualizado: ${query.docs.first.id}');
+        debugPrint('✅ Credenciales actualizadas para: $email');
+        debugPrint('📄 Documento actualizado: ${query.docs.first.id}');
       } else {
-        print('⚠️ No se encontró documento de credenciales para: $email');
+        debugPrint('⚠️ No se encontró documento de credenciales para: $email');
         
         // Buscar en todos los documentos para debug
         final allDocs = await _db.collection('credenciales').get();
-        print('📋 Total documentos en credenciales: ${allDocs.docs.length}');
+        debugPrint('📋 Total documentos en credenciales: ${allDocs.docs.length}');
         for (var doc in allDocs.docs) {
           final data = doc.data();
-          print('  - ID: ${doc.id}');
-          print('    Email: ${data['email']}');
-          print('    Tipo: ${data['tipo']}');
-          print('    Nombre: ${data['nombre']}');
+          debugPrint('  - ID: ${doc.id}');
+          debugPrint('    Email: ${data['email']}');
+          debugPrint('    Tipo: ${data['tipo']}');
+          debugPrint('    Nombre: ${data['nombre']}');
         }
       }
     } catch (e) {
-      print('❌ Error al actualizar credenciales: $e');
+      debugPrint('❌ Error al actualizar credenciales: $e');
       throw Exception('Error al actualizar credenciales: $e');
     }
   }

@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 /// Script para limpiar credenciales duplicadas
 /// Ejecutar una sola vez desde main.dart o una pantalla de debug
 Future<void> limpiarCredencialiesDuplicadas() async {
-  print('🧹 Iniciando limpieza de duplicados...');
+  debugPrint('🧹 Iniciando limpieza de duplicados...');
   
   try {
     final firestore = FirebaseFirestore.instance;
@@ -32,7 +33,7 @@ Future<void> limpiarCredencialiesDuplicadas() async {
       final docs = entry.value;
       
       if (docs.length > 1) {
-        print('⚠️ Duplicado encontrado: $email (${docs.length} registros)');
+        debugPrint('⚠️ Duplicado encontrado: $email (${docs.length} registros)');
         
         // Ordenar por fecha de creación (si existe) o mantener el primero
         docs.sort((a, b) {
@@ -50,19 +51,19 @@ Future<void> limpiarCredencialiesDuplicadas() async {
         
         // Mantener el primero (más antiguo), eliminar el resto
         for (int i = 1; i < docs.length; i++) {
-          print('   🗑️ Eliminando duplicado: ${docs[i].id}');
+          debugPrint('   🗑️ Eliminando duplicado: ${docs[i].id}');
           await docs[i].reference.delete();
           eliminados++;
         }
         
-        print('   ✅ Mantenido: ${docs[0].id}');
+        debugPrint('   ✅ Mantenido: ${docs[0].id}');
       }
     }
     
-    print('✅ Limpieza completada: $eliminados duplicados eliminados');
+    debugPrint('✅ Limpieza completada: $eliminados duplicados eliminados');
     
   } catch (e) {
-    print('❌ Error al limpiar duplicados: $e');
+    debugPrint('❌ Error al limpiar duplicados: $e');
   }
 }
 
@@ -73,9 +74,9 @@ Future<void> eliminarCredencialPorId(String docId) async {
         .collection('credenciales')
         .doc(docId)
         .delete();
-    print('✅ Credencial $docId eliminado');
+    debugPrint('✅ Credencial $docId eliminado');
   } catch (e) {
-    print('❌ Error al eliminar: $e');
+    debugPrint('❌ Error al eliminar: $e');
   }
 }
 
@@ -86,22 +87,22 @@ Future<void> listarCredenciales() async {
         .collection('credenciales')
         .get();
     
-    print('📋 Total credenciales: ${snapshot.docs.length}');
-    print('━' * 60);
+    debugPrint('📋 Total credenciales: ${snapshot.docs.length}');
+    debugPrint('━' * 60);
     
     for (var doc in snapshot.docs) {
       final data = doc.data();
-      print('ID: ${doc.id}');
-      print('Email: ${data['email']}');
-      print('Tipo: ${data['tipo']}');
-      print('Password: ${data['password']}');
-      print('Condominio: ${data['condominio']}');
+      debugPrint('ID: ${doc.id}');
+      debugPrint('Email: ${data['email']}');
+      debugPrint('Tipo: ${data['tipo']}');
+      debugPrint('Password: ${data['password']}');
+      debugPrint('Condominio: ${data['condominio']}');
       if (data['casa'] != null) {
-        print('Casa: ${data['casa']}');
+        debugPrint('Casa: ${data['casa']}');
       }
-      print('━' * 60);
+      debugPrint('━' * 60);
     }
   } catch (e) {
-    print('❌ Error: $e');
+    debugPrint('❌ Error: $e');
   }
 }

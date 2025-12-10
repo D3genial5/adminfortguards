@@ -600,6 +600,10 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
             ElevatedButton(
               onPressed: cargando ? null : () async {
                 if (formKey.currentState!.validate()) {
+                  // Capturar referencias antes del await
+                  final navigator = Navigator.of(context);
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
+                  
                   setDialogState(() => cargando = true);
                   
                   final exito = await ConfiguracionService.cambiarContrasena(
@@ -608,9 +612,6 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                   );
                   
                   if (mounted) {
-                    final navigator = Navigator.of(context);
-                    final scaffoldMessenger = ScaffoldMessenger.of(context);
-                    
                     navigator.pop();
                     
                     if (exito) {

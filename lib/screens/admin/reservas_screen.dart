@@ -266,9 +266,10 @@ class _ReservasScreenState extends State<ReservasScreen> with SingleTickerProvid
   }
 
   void _aprobarReserva(ReservaModel reserva) {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     showDialog(
       context: context,
-      builder: (context) => _AprobarReservaDialog(
+      builder: (dialogContext) => _AprobarReservaDialog(
         reserva: reserva,
         onApprove: (costoAdicional, observaciones) async {
           try {
@@ -281,7 +282,7 @@ class _ReservasScreenState extends State<ReservasScreen> with SingleTickerProvid
             );
             
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
+              scaffoldMessenger.showSnackBar(
                 const SnackBar(
                   content: Text('Reserva aprobada exitosamente'),
                   backgroundColor: Colors.green,
@@ -290,7 +291,7 @@ class _ReservasScreenState extends State<ReservasScreen> with SingleTickerProvid
             }
           } catch (e) {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
+              scaffoldMessenger.showSnackBar(
                 SnackBar(
                   content: Text('Error al aprobar reserva: $e'),
                   backgroundColor: Colors.red,
@@ -304,9 +305,10 @@ class _ReservasScreenState extends State<ReservasScreen> with SingleTickerProvid
   }
 
   void _rechazarReserva(ReservaModel reserva) {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     showDialog(
       context: context,
-      builder: (context) => _RechazarReservaDialog(
+      builder: (dialogContext) => _RechazarReservaDialog(
         reserva: reserva,
         onReject: (motivo) async {
           try {
@@ -318,7 +320,7 @@ class _ReservasScreenState extends State<ReservasScreen> with SingleTickerProvid
             );
             
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
+              scaffoldMessenger.showSnackBar(
                 const SnackBar(
                   content: Text('Reserva rechazada'),
                   backgroundColor: Colors.orange,
@@ -327,7 +329,7 @@ class _ReservasScreenState extends State<ReservasScreen> with SingleTickerProvid
             }
           } catch (e) {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
+              scaffoldMessenger.showSnackBar(
                 SnackBar(
                   content: Text('Error al rechazar reserva: $e'),
                   backgroundColor: Colors.red,

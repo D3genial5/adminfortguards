@@ -92,7 +92,7 @@ class _DebugToolsScreenState extends State<DebugToolsScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                color: Colors.orange.withValues(alpha: 0.1),
                 border: Border.all(color: Colors.orange),
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -152,9 +152,9 @@ class _DebugToolsScreenState extends State<DebugToolsScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.1),
+                  color: Colors.grey.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                  border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
                 ),
                 child: Text(
                   _resultado,

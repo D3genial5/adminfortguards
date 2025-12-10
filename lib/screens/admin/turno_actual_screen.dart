@@ -796,6 +796,10 @@ class _TurnoActualScreenState extends State<TurnoActualScreen> {
           ElevatedButton(
             onPressed: () async {
               if (formKey.currentState!.validate()) {
+                // Capturar referencias antes del await
+                final navigator = Navigator.of(context);
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
+                
                 try {
                   final nuevoReporte = ReporteAcceso(
                     id: '',
@@ -812,8 +816,8 @@ class _TurnoActualScreenState extends State<TurnoActualScreen> {
                   await TurnoService.agregarReporteAcceso(turno.id, nuevoReporte);
                   
                   if (mounted) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    navigator.pop();
+                    scaffoldMessenger.showSnackBar(
                       const SnackBar(
                         content: Text('Acceso registrado exitosamente'),
                         backgroundColor: Colors.green,
@@ -822,7 +826,7 @@ class _TurnoActualScreenState extends State<TurnoActualScreen> {
                   }
                 } catch (e) {
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    scaffoldMessenger.showSnackBar(
                       SnackBar(
                         content: Text('Error al registrar acceso: $e'),
                         backgroundColor: Colors.red,
@@ -879,13 +883,16 @@ class _TurnoActualScreenState extends State<TurnoActualScreen> {
   }
 
   void _iniciarTurno(String tipoTurno) async {
+    // Capturar referencia antes de operaciones async
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
     try {
       // Obtener guardias activos del tipo de turno
       final guardias = await GuardiaService.obtenerGuardiasPorTurno(tipoTurno);
       
       if (guardias.isEmpty) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          scaffoldMessenger.showSnackBar(
             SnackBar(
               content: Text('No hay guardias activos para turno $tipoTurno'),
               backgroundColor: Colors.orange,
@@ -895,6 +902,8 @@ class _TurnoActualScreenState extends State<TurnoActualScreen> {
         return;
       }
 
+      if (!mounted) return;
+      
       // Mostrar selector de guardia
       final guardiaSeleccionado = await showDialog<GuardiaModel>(
         context: context,
@@ -964,7 +973,7 @@ class _TurnoActualScreenState extends State<TurnoActualScreen> {
         ),
       );
 
-      if (guardiaSeleccionado != null) {
+      if (guardiaSeleccionado != null && mounted) {
         // Confirmar inicio de turno
         final confirmar = await showDialog<bool>(
           context: context,

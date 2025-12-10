@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../services/alerta_service.dart';
+import '../admin/historial_ingresos_screen.dart';
 
 class PerfilGuardiaScreen extends StatelessWidget {
   final Map<String, dynamic>? guardiaData;
@@ -102,31 +104,148 @@ class PerfilGuardiaScreen extends StatelessWidget {
             
             SizedBox(height: isTablet ? 48 : 32),
             
-            // Botón centrado y responsivo
+            // Botones de acción
             Center(
               child: SizedBox(
                 width: isTablet ? 300 : double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    context.push('/scan-qr', extra: guardiaData);
-                  },
-                  icon: Icon(
-                    Icons.qr_code_scanner,
-                    size: isTablet ? 28 : 24,
-                  ),
-                  label: Text(
-                    'Escanear QR',
-                    style: TextStyle(fontSize: isTablet ? 18 : 16),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isTablet ? 32 : 24,
-                      vertical: isTablet ? 20 : 16,
+                child: Column(
+                  children: [
+                    // Botón Escanear QR
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          context.push('/scan-qr', extra: guardiaData);
+                        },
+                        icon: Icon(
+                          Icons.qr_code_scanner,
+                          size: isTablet ? 28 : 24,
+                        ),
+                        label: Text(
+                          'Escanear QR',
+                          style: TextStyle(fontSize: isTablet ? 18 : 16),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isTablet ? 32 : 24,
+                            vertical: isTablet ? 20 : 16,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    
+                    SizedBox(height: isTablet ? 16 : 12),
+                    
+                    // Botón Ver Alertas con badge
+                    SizedBox(
+                      width: double.infinity,
+                      child: StreamBuilder<int>(
+                        stream: AlertaService.streamCantidadAlertasActivas(condominio),
+                        builder: (context, snapshot) {
+                          final cantidadAlertas = snapshot.data ?? 0;
+                          
+                          return ElevatedButton.icon(
+                            onPressed: () {
+                              context.push('/alertas', extra: guardiaData);
+                            },
+                            icon: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Icon(
+                                  Icons.warning_amber_rounded,
+                                  size: isTablet ? 28 : 24,
+                                  color: cantidadAlertas > 0 ? Colors.red : null,
+                                ),
+                                if (cantidadAlertas > 0)
+                                  Positioned(
+                                    right: -8,
+                                    top: -8,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 18,
+                                        minHeight: 18,
+                                      ),
+                                      child: Text(
+                                        '$cantidadAlertas',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            label: Text(
+                              cantidadAlertas > 0 
+                                  ? 'Ver Alertas ($cantidadAlertas activas)'
+                                  : 'Ver Alertas',
+                              style: TextStyle(
+                                fontSize: isTablet ? 18 : 16,
+                                color: cantidadAlertas > 0 ? Colors.red : null,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isTablet ? 32 : 24,
+                                vertical: isTablet ? 20 : 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              backgroundColor: cantidadAlertas > 0 
+                                  ? Colors.red.shade50
+                                  : null,
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  ),
+                    
+                    SizedBox(height: isTablet ? 16 : 12),
+                    
+                    // Botón Historial de Ingresos
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => HistorialIngresosScreen(condominio: condominio),
+                            ),
+                          );
+                        },
+                        icon: Icon(
+                          Icons.history_rounded,
+                          size: isTablet ? 28 : 24,
+                        ),
+                        label: Text(
+                          'Historial de Ingresos',
+                          style: TextStyle(fontSize: isTablet ? 18 : 16),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isTablet ? 32 : 24,
+                            vertical: isTablet ? 20 : 16,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

@@ -14,6 +14,7 @@ import 'configuracion_screen.dart';
 import 'reportes_expensas_screen.dart';
 import 'reservas_screen.dart';
 import 'gestion_qr_pago_screen.dart';
+import 'historial_ingresos_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   final String condominioId;
@@ -427,6 +428,22 @@ class AdminDashboardScreen extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (_) => ReservasScreen(condominioId: condominioId),
+                      ),
+                    );
+                  },
+                  isTablet: isTablet,
+                ),
+                const SizedBox(height: 4),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.history_rounded,
+                  title: 'Historial de Ingresos',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => HistorialIngresosScreen(condominio: condominioId),
                       ),
                     );
                   },

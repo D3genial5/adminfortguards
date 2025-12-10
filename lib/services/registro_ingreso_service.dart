@@ -122,4 +122,139 @@ class RegistroIngresoService {
       throw Exception('Error al obtener estadísticas: $e');
     }
   }
+
+  /// Obtener registros por fecha específica
+  static Future<List<RegistroIngresoModel>> obtenerRegistrosPorFecha(
+    String condominio,
+    DateTime fecha,
+  ) async {
+    final inicioFecha = DateTime(fecha.year, fecha.month, fecha.day);
+    final finFecha = DateTime(fecha.year, fecha.month, fecha.day, 23, 59, 59);
+
+    try {
+      final snapshot = await _firestore
+          .collection(_collection)
+          .where('condominio', isEqualTo: condominio)
+          .where('fechaIngreso', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioFecha))
+          .where('fechaIngreso', isLessThanOrEqualTo: Timestamp.fromDate(finFecha))
+          .get();
+
+      final registros = snapshot.docs
+          .map((doc) => RegistroIngresoModel.fromFirestore(doc))
+          .toList();
+      
+      // Ordenar manualmente por fecha descendente
+      registros.sort((a, b) => b.fechaIngreso.compareTo(a.fechaIngreso));
+      
+      return registros;
+    } catch (e) {
+      throw Exception('Error al obtener registros por fecha: $e');
+    }
+  }
+
+  /// Obtener registros de los últimos N meses
+  static Future<List<RegistroIngresoModel>> obtenerRegistrosUltimosMeses(
+    String condominio, {
+    int meses = 3,
+    int? limite,
+  }) async {
+    final ahora = DateTime.now();
+    final fechaInicio = DateTime(ahora.year, ahora.month - meses, ahora.day);
+
+    try {
+      Query query = _firestore
+          .collection(_collection)
+          .where('condominio', isEqualTo: condominio)
+          .where('fechaIngreso', isGreaterThanOrEqualTo: Timestamp.fromDate(fechaInicio));
+
+      if (limite != null) {
+        query = query.limit(limite);
+      }
+
+      final snapshot = await query.get();
+
+      final registros = snapshot.docs
+          .map((doc) => RegistroIngresoModel.fromFirestore(doc))
+          .toList();
+      
+      // Ordenar manualmente por fecha descendente
+      registros.sort((a, b) => b.fechaIngreso.compareTo(a.fechaIngreso));
+      
+      return registros;
+    } catch (e) {
+      throw Exception('Error al obtener registros de los últimos meses: $e');
+    }
+  }
+
+  /// Obtener estadísticas extendidas
+  static Future<Map<String, int>> obtenerEstadisticasExtendidas(String condominio) async {
+    try {
+      final ahora = DateTime.now();
+      final inicioHoy = DateTime(ahora.year, ahora.month, ahora.day);
+      final inicioMes = DateTime(ahora.year, ahora.month, 1);
+      final inicioSemana = inicioHoy.subtract(Duration(days: inicioHoy.weekday - 1));
+
+      final [hoySnapshot, semanaSnapshot, mesSnapshot] = await Future.wait([
+        _firestore
+            .collection(_collection)
+            .where('condominio', isEqualTo: condominio)
+            .where('fechaIngreso', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioHoy))
+            .get(),
+        _firestore
+            .collection(_collection)
+            .where('condominio', isEqualTo: condominio)
+            .where('fechaIngreso', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioSemana))
+            .get(),
+        _firestore
+            .collection(_collection)
+            .where('condominio', isEqualTo: condominio)
+            .where('fechaIngreso', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioMes))
+            .get(),
+      ]);
+
+      return {
+        'hoy': hoySnapshot.docs.length,
+        'semana': semanaSnapshot.docs.length,
+        'mes': mesSnapshot.docs.length,
+      };
+    } catch (e) {
+      throw Exception('Error al obtener estadísticas extendidas: $e');
+    }
+  }
+
+  /// Buscar registros por nombre o CI
+  static Future<List<RegistroIngresoModel>> buscarRegistros(
+    String condominio,
+    String termino,
+  ) async {
+    try {
+      // Firestore no soporta búsqueda de texto completo, 
+      // así que obtenemos todos y filtramos en código
+      final ahora = DateTime.now();
+      final fechaInicio = DateTime(ahora.year, ahora.month - 3, ahora.day);
+      
+      final snapshot = await _firestore
+          .collection(_collection)
+          .where('condominio', isEqualTo: condominio)
+          .where('fechaIngreso', isGreaterThanOrEqualTo: Timestamp.fromDate(fechaInicio))
+          .get();
+
+      final terminoLower = termino.toLowerCase();
+      
+      final registros = snapshot.docs
+          .map((doc) => RegistroIngresoModel.fromFirestore(doc))
+          .where((r) => 
+              r.usuarioNombre.toLowerCase().contains(terminoLower) ||
+              (r.visitanteCI?.contains(termino) ?? false) ||
+              (r.casa?.toLowerCase().contains(terminoLower) ?? false))
+          .toList();
+      
+      // Ordenar por fecha descendente
+      registros.sort((a, b) => b.fechaIngreso.compareTo(a.fechaIngreso));
+      
+      return registros;
+    } catch (e) {
+      throw Exception('Error al buscar registros: $e');
+    }
+  }
 }

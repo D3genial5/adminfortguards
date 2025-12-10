@@ -183,6 +183,9 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
     );
   }
 
+  // Color turquesa para acentos
+  Color get _primaryColor => Theme.of(context).colorScheme.primary;
+  
   Widget _buildSeccionPrioridad() {
     return Card(
       elevation: 2,
@@ -196,7 +199,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
               children: [
                 Icon(
                   Icons.priority_high_rounded,
-                  color: Theme.of(context).colorScheme.primary,
+                  color: _primaryColor,
                   size: 24,
                 ),
                 const SizedBox(width: 12),
@@ -216,39 +219,71 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
               runSpacing: 8,
               children: PrioridadNotificacion.values.map((prioridad) {
                 final isSelected = _prioridad == prioridad;
-                Color color;
+                Color bgColor;
+                Color textColor;
                 switch (prioridad) {
                   case PrioridadNotificacion.baja:
-                    color = Colors.grey;
+                    bgColor = const Color(0xFF444444);
+                    textColor = Colors.white;
                     break;
                   case PrioridadNotificacion.media:
-                    color = Colors.blue;
+                    bgColor = const Color(0xFF3A8DFF);
+                    textColor = Colors.white;
                     break;
                   case PrioridadNotificacion.alta:
-                    color = Colors.orange;
+                    bgColor = const Color(0xFFFFC107);
+                    textColor = Colors.black;
                     break;
                   case PrioridadNotificacion.urgente:
-                    color = Colors.red;
+                    bgColor = const Color(0xFFFF4E4E);
+                    textColor = Colors.white;
                     break;
                 }
 
-                return FilterChip(
-                  label: Text(
-                    prioridad.name.toUpperCase(),
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : color,
-                      fontWeight: FontWeight.bold,
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _prioridad = prioridad;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: bgColor,
+                        borderRadius: BorderRadius.circular(20),
+                        border: isSelected 
+                            ? Border.all(color: _primaryColor.withValues(alpha: 0.6), width: 2)
+                            : null,
+                        boxShadow: isSelected ? [
+                          BoxShadow(
+                            color: _primaryColor.withValues(alpha: 0.4),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ] : null,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isSelected) ...[
+                            Icon(Icons.check, size: 16, color: textColor),
+                            const SizedBox(width: 4),
+                          ],
+                          Text(
+                            prioridad.name.toUpperCase(),
+                            style: TextStyle(
+                              color: textColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      _prioridad = prioridad;
-                    });
-                  },
-                  backgroundColor: color.withValues(alpha: 0.1),
-                  selectedColor: color,
-                  checkmarkColor: Colors.white,
                 );
               }).toList(),
             ),
@@ -271,7 +306,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
               children: [
                 Icon(
                   Icons.people_rounded,
-                  color: Theme.of(context).colorScheme.primary,
+                  color: _primaryColor,
                   size: 24,
                 ),
                 const SizedBox(width: 12),
@@ -287,9 +322,12 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
             ),
             const SizedBox(height: 20),
             CheckboxListTile(
-              title: const Text('Todos los usuarios'),
-              subtitle: const Text('Propietarios y residentes'),
+              title: Text('Todos los usuarios', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+              subtitle: Text('Propietarios y residentes', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
               value: _destinatarios.contains('todos'),
+              activeColor: _primaryColor,
+              checkColor: Colors.white,
+              side: BorderSide(color: _primaryColor, width: 2),
               onChanged: (value) {
                 setState(() {
                   if (value == true) {
@@ -302,9 +340,12 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
               contentPadding: EdgeInsets.zero,
             ),
             CheckboxListTile(
-              title: const Text('Solo propietarios'),
-              subtitle: const Text('Únicamente los dueños de las casas'),
+              title: Text('Solo propietarios', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+              subtitle: Text('Únicamente los dueños de las casas', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
               value: _destinatarios.contains('propietarios'),
+              activeColor: _primaryColor,
+              checkColor: Colors.white,
+              side: BorderSide(color: _destinatarios.contains('todos') ? Colors.grey : _primaryColor, width: 2),
               onChanged: _destinatarios.contains('todos') ? null : (value) {
                 setState(() {
                   if (value == true) {
@@ -317,9 +358,12 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
               contentPadding: EdgeInsets.zero,
             ),
             CheckboxListTile(
-              title: const Text('Solo residentes'),
-              subtitle: const Text('Únicamente los habitantes de las casas'),
+              title: Text('Solo residentes', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+              subtitle: Text('Únicamente los habitantes de las casas', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
               value: _destinatarios.contains('residentes'),
+              activeColor: _primaryColor,
+              checkColor: Colors.white,
+              side: BorderSide(color: _destinatarios.contains('todos') ? Colors.grey : _primaryColor, width: 2),
               onChanged: _destinatarios.contains('todos') ? null : (value) {
                 setState(() {
                   if (value == true) {
@@ -350,7 +394,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
               children: [
                 Icon(
                   Icons.schedule_rounded,
-                  color: Theme.of(context).colorScheme.primary,
+                  color: _primaryColor,
                   size: 24,
                 ),
                 const SizedBox(width: 12),
@@ -366,13 +410,15 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
             ),
             const SizedBox(height: 20),
             SwitchListTile(
-              title: const Text('Programar envío'),
+              title: Text('Programar envío', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
               subtitle: Text(
                 _esProgramada 
                     ? 'Se enviará en la fecha y hora seleccionada'
                     : 'Se enviará inmediatamente',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
               value: _esProgramada,
+              activeColor: _primaryColor,
               onChanged: (value) {
                 setState(() {
                   _esProgramada = value;
@@ -518,8 +564,10 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
             onPressed: _guardando ? null : () => Navigator.pop(context),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
+              foregroundColor: Theme.of(context).colorScheme.primary,
+              side: BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.5),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
               ),
             ),
             child: const Text('Cancelar'),
@@ -532,10 +580,12 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
             onPressed: _guardando ? null : _guardarNotificacion,
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.grey.shade300,
+              disabledForegroundColor: Colors.grey.shade500,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
               ),
             ),
             icon: _guardando

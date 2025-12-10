@@ -13,6 +13,10 @@
 # Mobile Scanner optimizations
 -keep class dev.steenbakker.mobile_scanner.** { *; }
 
+# Google Play Core (deferred components)
+-keep class com.google.android.play.core.** { *; }
+-dontwarn com.google.android.play.core.**
+
 # Reduce APK size
 -dontwarn javax.annotation.**
 -dontwarn org.checkerframework.**

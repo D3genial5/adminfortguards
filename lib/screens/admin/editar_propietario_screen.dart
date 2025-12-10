@@ -246,7 +246,7 @@ class _EditarPropietarioScreenState extends State<EditarPropietarioScreen> {
                           Text(
                             'Contraseña Actual',
                             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurface.withOpacity(0.7),
+                              color: colorScheme.onSurface.withValues(alpha: 0.7),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -254,10 +254,10 @@ class _EditarPropietarioScreenState extends State<EditarPropietarioScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             decoration: BoxDecoration(
-                              color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: colorScheme.outline.withOpacity(0.3),
+                                color: colorScheme.outline.withValues(alpha: 0.3),
                               ),
                             ),
                             child: Row(
@@ -265,7 +265,7 @@ class _EditarPropietarioScreenState extends State<EditarPropietarioScreen> {
                                 Icon(
                                   mostrarPassword ? Icons.visibility_rounded : Icons.visibility_off_rounded,
                                   size: 18,
-                                  color: colorScheme.onSurface.withOpacity(0.5),
+                                  color: colorScheme.onSurface.withValues(alpha: 0.5),
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
@@ -297,7 +297,7 @@ class _EditarPropietarioScreenState extends State<EditarPropietarioScreen> {
                           Text(
                             'Nueva Contraseña',
                             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurface.withOpacity(0.7),
+                              color: colorScheme.onSurface.withValues(alpha: 0.7),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -309,15 +309,15 @@ class _EditarPropietarioScreenState extends State<EditarPropietarioScreen> {
                               hintText: 'Ingresa nueva contraseña',
                               isDense: true,
                               filled: true,
-                              fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                              fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.3)),
+                                borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.3)),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.3)),
+                                borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.3)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -331,7 +331,7 @@ class _EditarPropietarioScreenState extends State<EditarPropietarioScreen> {
                           Text(
                             'Confirmar Contraseña',
                             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurface.withOpacity(0.7),
+                              color: colorScheme.onSurface.withValues(alpha: 0.7),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -343,15 +343,15 @@ class _EditarPropietarioScreenState extends State<EditarPropietarioScreen> {
                               hintText: 'Confirma la nueva contraseña',
                               isDense: true,
                               filled: true,
-                              fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                              fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.3)),
+                                borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.3)),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.3)),
+                                borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.3)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -369,7 +369,7 @@ class _EditarPropietarioScreenState extends State<EditarPropietarioScreen> {
                               style: ElevatedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                                 backgroundColor: colorScheme.primary,
-                                disabledBackgroundColor: colorScheme.primary.withOpacity(0.5),
+                                disabledBackgroundColor: colorScheme.primary.withValues(alpha: 0.5),
                               ),
                               child: isSaving
                                   ? const SizedBox(
@@ -444,7 +444,7 @@ class _EditarPropietarioScreenState extends State<EditarPropietarioScreen> {
                                             '${fecha.day}/${fecha.month}/${fecha.year} ${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')}',
                                             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                               fontSize: 11,
-                                              color: colorScheme.onSurface.withOpacity(0.5),
+                                              color: colorScheme.onSurface.withValues(alpha: 0.5),
                                             ),
                                           ),
                                         ],
@@ -475,15 +475,15 @@ class _EditarPropietarioScreenState extends State<EditarPropietarioScreen> {
     return Container(
       decoration: BoxDecoration(
         color: isDark
-            ? colorScheme.surface.withOpacity(0.5)
-            : colorScheme.surfaceContainerHighest.withOpacity(0.2),
+            ? colorScheme.surface.withValues(alpha: 0.5)
+            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: colorScheme.outline.withOpacity(0.2),
+          color: colorScheme.outline.withValues(alpha: 0.2),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -522,7 +522,7 @@ class _EditarPropietarioScreenState extends State<EditarPropietarioScreen> {
           child: Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: colorScheme.onSurface.withOpacity(0.6),
+              color: colorScheme.onSurface.withValues(alpha: 0.6),
               fontWeight: FontWeight.w500,
             ),
           ),

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 /// Servicio para sincronizar contraseñas entre administradores y credenciales
 /// 
@@ -39,7 +40,7 @@ class CredentialsSyncService {
     final col = _db.collection('credenciales');
 
     try {
-      print('🔄 Sincronizando credencial para: $email en $condominio');
+      debugPrint('🔄 Sincronizando credencial para: $email en $condominio');
 
       // 1) Buscar documentos de credenciales del administrador
       // Intento principal con índice compuesto
@@ -55,7 +56,7 @@ class CredentialsSyncService {
       } on FirebaseException catch (e) {
         // Fallback si falta índice
         if (e.code == 'failed-precondition' || e.message?.contains('index') == true) {
-          print('⚠️ Faltó índice compuesto, usando fallback por email y filtrando en memoria');
+          debugPrint('⚠️ Faltó índice compuesto, usando fallback por email y filtrando en memoria');
           final emailOnly = await col
               .where('email', isEqualTo: email)
               .get(const GetOptions(source: Source.serverAndCache));
@@ -68,14 +69,14 @@ class CredentialsSyncService {
         }
       }
 
-      print('📊 Documentos encontrados: ${matches.length}');
+      debugPrint('📊 Documentos encontrados: ${matches.length}');
 
       final batch = _db.batch();
       int operaciones = 0;
 
       if (matches.isEmpty && createIfMissing) {
         // 2) Crear credencial si no existe (Opción A - por defecto)
-        print('➕ Creando credencial faltante...');
+        debugPrint('➕ Creando credencial faltante...');
         final docRef = col.doc();
         
         batch.set(docRef, {
@@ -98,7 +99,7 @@ class CredentialsSyncService {
         });
 
         operaciones++;
-        print('✅ Credencial creada: ${docRef.id}');
+        debugPrint('✅ Credencial creada: ${docRef.id}');
 
         // Opción B (comentada): No crear, solo notificar
         // throw CredentialNotFoundException(
@@ -106,7 +107,7 @@ class CredentialsSyncService {
         // );
       } else {
         // 3) Actualizar todos los documentos coincidentes
-        print('🔄 Actualizando ${matches.length} credencial(es)...');
+        debugPrint('🔄 Actualizando ${matches.length} credencial(es)...');
         
         for (final doc in matches) {
           batch.update(doc.reference, {
@@ -124,17 +125,17 @@ class CredentialsSyncService {
           });
 
           operaciones++;
-          print('✅ Actualizada credencial: ${doc.id}');
+          debugPrint('✅ Actualizada credencial: ${doc.id}');
         }
       }
 
       // 4) Ejecutar todas las operaciones en batch (atómico)
       await batch.commit();
-      print('✅ Sincronización completada: $operaciones operación(es)');
+      debugPrint('✅ Sincronización completada: $operaciones operación(es)');
 
     } on FirebaseException catch (e) {
       // Error específico de Firebase
-      print('❌ Error Firebase al sincronizar: ${e.code} - ${e.message}');
+      debugPrint('❌ Error Firebase al sincronizar: ${e.code} - ${e.message}');
       
       if (e.code == 'failed-precondition' || e.message?.contains('index') == true) {
         throw Exception(
@@ -148,7 +149,7 @@ class CredentialsSyncService {
       throw Exception('No se pudo sincronizar la credencial: ${e.message}');
     } catch (e) {
       // Error genérico
-      print('❌ Error inesperado al sincronizar: $e');
+      debugPrint('❌ Error inesperado al sincronizar: $e');
       throw Exception('Error inesperado al sincronizar credenciales: $e');
     }
   }
@@ -170,7 +171,7 @@ class CredentialsSyncService {
 
       return q.docs.isNotEmpty;
     } catch (e) {
-      print('Error verificando credencial: $e');
+      debugPrint('Error verificando credencial: $e');
       return false;
     }
   }
@@ -194,7 +195,7 @@ class CredentialsSyncService {
           .map((doc) => {'id': doc.id, ...doc.data()})
           .toList();
     } catch (e) {
-      print('Error obteniendo historial: $e');
+      debugPrint('Error obteniendo historial: $e');
       return [];
     }
   }

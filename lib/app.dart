@@ -12,6 +12,7 @@ import 'screens/seguridad/login_seguridad_screen.dart';
 import 'screens/seguridad/perfil_guardia.dart';
 import 'screens/seguridad/scan_qr_screen.dart';
 import 'screens/seguridad/registros_activos_screen.dart';
+import 'screens/seguridad/alertas_screen.dart';
 import 'screens/admin/ver_credenciales_screen.dart';
 
 final GoRouter _router = GoRouter(
@@ -85,6 +86,13 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/credenciales',
       builder: (context, state) => const VerCredencialesScreen(),
+    ),
+
+    GoRoute(
+      path: '/alertas',
+      builder: (context, state) => AlertasScreen(
+        guardiaData: state.extra as Map<String, dynamic>?,
+      ),
     ),
 
   ],

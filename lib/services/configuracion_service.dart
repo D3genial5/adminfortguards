@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -27,7 +28,7 @@ class ConfiguracionService {
       // Si no existe configuración, devolver configuración por defecto
       return const ConfiguracionModel();
     } catch (e) {
-      print('Error al obtener configuración: $e');
+      debugPrint('Error al obtener configuración: $e');
       return const ConfiguracionModel();
     }
   }
@@ -44,7 +45,7 @@ class ConfiguracionService {
       
       return true;
     } catch (e) {
-      print('Error al guardar configuración: $e');
+      debugPrint('Error al guardar configuración: $e');
       return false;
     }
   }
@@ -69,7 +70,7 @@ class ConfiguracionService {
       
       return await guardarConfiguracion(nuevaConfiguracion);
     } catch (e) {
-      print('Error al actualizar configuración: $e');
+      debugPrint('Error al actualizar configuración: $e');
       return false;
     }
   }
@@ -85,7 +86,7 @@ class ConfiguracionService {
             .set(configuracion.toFirestore());
       }
     } catch (e) {
-      print('Error al sincronizar con Firestore: $e');
+      debugPrint('Error al sincronizar con Firestore: $e');
     }
   }
 
@@ -103,8 +104,8 @@ class ConfiguracionService {
       final adminId = prefs.getString('admin_id');
       final adminEmail = prefs.getString('admin_email');
       
-      print('Admin ID desde SharedPreferences: $adminId');
-      print('Admin Email desde SharedPreferences: $adminEmail');
+      debugPrint('Admin ID desde SharedPreferences: $adminId');
+      debugPrint('Admin Email desde SharedPreferences: $adminEmail');
       
       // Si no hay ID guardado, buscar por email
       if (adminId == null && adminEmail != null) {
@@ -134,10 +135,10 @@ class ConfiguracionService {
         }
       }
 
-      print('No se encontró administrador logueado');
+      debugPrint('No se encontró administrador logueado');
       return null;
     } catch (e) {
-      print('Error al obtener administrador actual: $e');
+      debugPrint('Error al obtener administrador actual: $e');
       return null;
     }
   }
@@ -151,7 +152,7 @@ class ConfiguracionService {
       // Obtener el administrador logueado actual
       final adminInfo = await _obtenerAdministradorActual();
       if (adminInfo == null) {
-        print('No hay administrador logueado');
+        debugPrint('No hay administrador logueado');
         return false;
       }
 
@@ -165,11 +166,11 @@ class ConfiguracionService {
       // El login usa 'passwordHash', así que debemos usar el mismo campo
       final contrasenaAlmacenada = adminData['passwordHash'] ?? adminData['password'] ?? '';
       
-      print('Contraseña almacenada: $contrasenaAlmacenada');
-      print('Contraseña actual hasheada: $contrasenaActualHasheada');
+      debugPrint('Contraseña almacenada: $contrasenaAlmacenada');
+      debugPrint('Contraseña actual hasheada: $contrasenaActualHasheada');
       
       if (contrasenaAlmacenada != contrasenaActualHasheada) {
-        print('Contraseña actual incorrecta');
+        debugPrint('Contraseña actual incorrecta');
         return false;
       }
 
@@ -183,7 +184,7 @@ class ConfiguracionService {
         'fechaActualizacion': FieldValue.serverTimestamp(),
       });
 
-      print('✅ Contraseña actualizada en administradores');
+      debugPrint('✅ Contraseña actualizada en administradores');
 
       // 🔄 SINCRONIZAR CON CREDENCIALES (no dependemos de FirebaseAuth.currentUser)
       // Obtener datos necesarios para la sincronización
@@ -193,7 +194,7 @@ class ConfiguracionService {
 
       if (email != null && condominio != null) {
         try {
-          print('🔄 Iniciando sincronización con credenciales...');
+          debugPrint('🔄 Iniciando sincronización con credenciales...');
 
           final syncService = CredentialsSyncService();
           await syncService.updateAdminPasswordAndSyncCredentials(
@@ -203,20 +204,20 @@ class ConfiguracionService {
             adminUid: fallbackAdminUid,
           );
 
-          print('✅ Sincronización con credenciales completada');
+          debugPrint('✅ Sincronización con credenciales completada');
         } catch (syncError) {
           // Log del error pero no fallar toda la operación
           // La contraseña en administradores ya se actualizó correctamente
-          print('⚠️ Advertencia: No se pudo sincronizar con credenciales: $syncError');
+          debugPrint('⚠️ Advertencia: No se pudo sincronizar con credenciales: $syncError');
         }
       } else {
-        print('⚠️ Advertencia: Faltan datos para sincronizar (email: $email, condominio: $condominio)');
+        debugPrint('⚠️ Advertencia: Faltan datos para sincronizar (email: $email, condominio: $condominio)');
       }
 
       return true;
       
     } catch (e) {
-      print('❌ Error al cambiar contraseña: $e');
+      debugPrint('❌ Error al cambiar contraseña: $e');
       return false;
     }
   }
@@ -236,7 +237,7 @@ class ConfiguracionService {
       // Funcionalidad de backup deshabilitada temporalmente
       throw Exception('Funcionalidad de backup no disponible');
     } catch (e) {
-      print('Error al crear backup: $e');
+      debugPrint('Error al crear backup: $e');
       return null;
     }
   }
@@ -260,7 +261,7 @@ class ConfiguracionService {
 
       return true;
     } catch (e) {
-      print('Error al restaurar backup: $e');
+      debugPrint('Error al restaurar backup: $e');
       return false;
     }
   }
@@ -272,7 +273,7 @@ class ConfiguracionService {
       await prefs.remove(_configKey);
       return true;
     } catch (e) {
-      print('Error al limpiar configuración: $e');
+      debugPrint('Error al limpiar configuración: $e');
       return false;
     }
   }
