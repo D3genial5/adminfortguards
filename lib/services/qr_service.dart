@@ -229,6 +229,9 @@ class QrService {
             resultado = ResultadoAcceso.sinUsos;
           }
         }
+        
+        // Marcar entrada verificada automáticamente en access_requests
+        await _marcarEntradaVerificada(qr);
       } else if (!aceptado) {
         resultado = ResultadoAcceso.denegado;
       }
@@ -259,6 +262,48 @@ class QrService {
         'mensaje': 'Error procesando acceso: $e',
         'resultado': ResultadoAcceso.qrInvalido,
       };
+    }
+  }
+
+  /// Marca la entrada como verificada en access_requests (para que el visitante lo vea automáticamente)
+  static Future<void> _marcarEntradaVerificada(QrInvitadoModel qr) async {
+    try {
+      // Buscar la solicitud de acceso relacionada con este QR
+      final query = await _db
+          .collection('access_requests')
+          .where('condominio', isEqualTo: qr.condominio)
+          .where('casaNumero', isEqualTo: qr.casaNumero)
+          .where('codigoQr', isEqualTo: qr.codigo)
+          .limit(1)
+          .get();
+
+      if (query.docs.isNotEmpty) {
+        await query.docs.first.reference.update({
+          'entradaVerificada': true,
+          'fechaEntrada': FieldValue.serverTimestamp(),
+        });
+        dev.log('✅ Entrada verificada automáticamente para ${qr.invitadoNombre}', name: 'QrService');
+      } else if (qr.invitadoCi.isNotEmpty) {
+        // Intentar buscar por CI del invitado si no se encontró por código QR
+        final queryByCi = await _db
+            .collection('access_requests')
+            .where('condominio', isEqualTo: qr.condominio)
+            .where('casaNumero', isEqualTo: qr.casaNumero)
+            .where('ci', isEqualTo: qr.invitadoCi)
+            .where('estado', isEqualTo: 'aceptada')
+            .limit(1)
+            .get();
+
+        if (queryByCi.docs.isNotEmpty) {
+          await queryByCi.docs.first.reference.update({
+            'entradaVerificada': true,
+            'fechaEntrada': FieldValue.serverTimestamp(),
+          });
+          dev.log('✅ Entrada verificada por CI para ${qr.invitadoNombre}', name: 'QrService');
+        }
+      }
+    } catch (e) {
+      dev.log('⚠️ Error marcando entrada verificada: $e', name: 'QrService');
     }
   }
 }

@@ -154,9 +154,11 @@ class _EditarCasaScreenState extends State<EditarCasaScreen> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.data != null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final safeBottom = MediaQuery.of(context).padding.bottom;
     
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF6EEE3),
       appBar: AppBar(
         centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.primary,
@@ -268,9 +270,9 @@ class _EditarCasaScreenState extends State<EditarCasaScreen> {
               ),
             ]),
             
-            const SizedBox(height: 32),
+            const SizedBox(height: 40),
             _buildSaveButton(),
-            const SizedBox(height: 24),
+            SizedBox(height: safeBottom + 28),
           ],
         ),
       ),
@@ -278,14 +280,16 @@ class _EditarCasaScreenState extends State<EditarCasaScreen> {
   }
 
   Widget _buildSectionTitle(String title) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Padding(
       padding: const EdgeInsets.only(left: 4),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF374151),
+          color: isDark ? Colors.white : const Color(0xFF374151),
           letterSpacing: 0.2,
         ),
       ),
@@ -293,13 +297,15 @@ class _EditarCasaScreenState extends State<EditarCasaScreen> {
   }
 
   Widget _buildCard(List<Widget> children) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -323,38 +329,50 @@ class _EditarCasaScreenState extends State<EditarCasaScreen> {
     int maxLines = 1,
     List<TextInputFormatter>? inputFormatters,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       maxLines: maxLines,
       inputFormatters: inputFormatters,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 15,
         fontWeight: FontWeight.w400,
-        color: Color(0xFF1A1A1A),
+        color: isDark ? Colors.white : const Color(0xFF1A1A1A),
       ),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        prefixIcon: Icon(icon, color: const Color(0xFF6B7280), size: 22),
+        prefixIcon: Icon(
+          icon, 
+          color: isDark ? Colors.white54 : const Color(0xFF6B7280), 
+          size: 22,
+        ),
         labelStyle: TextStyle(
-          color: const Color(0xFF6B7280),
+          color: isDark ? Colors.white70 : const Color(0xFF6B7280),
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
         hintStyle: TextStyle(
-          color: const Color(0xFF9CA3AF),
+          color: isDark ? Colors.white38 : const Color(0xFF9CA3AF),
           fontSize: 14,
         ),
         filled: true,
-        fillColor: const Color(0xFFF9FAFB),
+        fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF9FAFB),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB), width: 1.5),
+          borderSide: BorderSide(
+            color: isDark ? Colors.white24 : const Color(0xFFE5E7EB), 
+            width: 1.5,
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB), width: 1.5),
+          borderSide: BorderSide(
+            color: isDark ? Colors.white24 : const Color(0xFFE5E7EB), 
+            width: 1.5,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),

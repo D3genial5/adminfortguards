@@ -134,6 +134,7 @@ class AdminFirestoreService {
   }
 
   /// Cambia el estado de la expensa a 'pagada' o 'pendiente'
+  /// Sincroniza con la colección compartida para que la app de propietarios vea el cambio
   static Future<void> actualizarEstadoExpensa({
     required String condominioId,
     required int numero,
@@ -153,12 +154,64 @@ class AdminFirestoreService {
       updateData['fechaPago'] = FieldValue.delete();
     }
     
+    // Actualizar en la colección de casas del condominio
     await _db
         .collection('condominios')
         .doc(condominioId)
         .collection('casas')
         .doc(numero.toString())
         .update(updateData);
+    
+    // Sincronizar con colección de expensas compartida para propietarios
+    await _sincronizarExpensaConPropietarios(
+      condominioId: condominioId,
+      casaNumero: numero,
+      pagada: pagada,
+      montoPagado: montoPagado,
+    );
+  }
+  
+  /// Sincroniza el estado de expensa con la colección compartida
+  static Future<void> _sincronizarExpensaConPropietarios({
+    required String condominioId,
+    required int casaNumero,
+    required bool pagada,
+    double? montoPagado,
+  }) async {
+    try {
+      final mesActual = DateTime.now();
+      final periodoId = '${mesActual.year}-${mesActual.month.toString().padLeft(2, '0')}';
+      
+      final expensaRef = _db
+          .collection('expensas')
+          .doc('${condominioId}_${casaNumero}_$periodoId');
+      
+      final data = {
+        'condominioId': condominioId,
+        'casaNumero': casaNumero,
+        'periodo': periodoId,
+        'estado': pagada ? 'pagada' : 'pendiente',
+        'montoPagado': montoPagado ?? 0,
+        'fechaActualizacion': FieldValue.serverTimestamp(),
+      };
+      
+      if (pagada) {
+        data['fechaPago'] = FieldValue.serverTimestamp();
+      }
+      
+      await expensaRef.set(data, SetOptions(merge: true));
+      dev.log('✅ Expensa sincronizada: Casa $casaNumero - ${pagada ? "Pagada" : "Pendiente"}');
+    } catch (e) {
+      dev.log('⚠️ Error al sincronizar expensa: $e');
+    }
+  }
+  
+  /// Stream de expensas para escuchar cambios en tiempo real
+  static Stream<QuerySnapshot<Map<String, dynamic>>> streamExpensas(String condominioId) {
+    return _db
+        .collection('expensas')
+        .where('condominioId', isEqualTo: condominioId)
+        .snapshots();
   }
 
   /// Actualiza las credenciales de un administrador en el sistema
@@ -300,5 +353,69 @@ class AdminFirestoreService {
       'mensaje': mensaje,
       'fecha': FieldValue.serverTimestamp(),
     });
+  }
+
+  /// Limpia credenciales duplicadas en un condominio
+  /// Mantiene solo la más reciente de cada combinación condominio+casa+tipo
+  static Future<Map<String, dynamic>> limpiarCredencialesDuplicadas(String condominioId) async {
+    try {
+      final snapshot = await _db
+          .collection('credenciales')
+          .where('condominio', isEqualTo: condominioId)
+          .get();
+      
+      // Agrupar por casa+tipo
+      final grupos = <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
+      
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final casa = data['casa']?.toString() ?? '';
+        final tipo = data['tipo']?.toString() ?? '';
+        final key = '$casa-$tipo';
+        
+        grupos.putIfAbsent(key, () => []);
+        grupos[key]!.add(doc);
+      }
+      
+      int eliminados = 0;
+      final duplicadosEncontrados = <String>[];
+      
+      // Para cada grupo con más de 1 documento, eliminar los duplicados
+      for (final entry in grupos.entries) {
+        if (entry.value.length > 1) {
+          duplicadosEncontrados.add('Casa ${entry.key.split('-')[0]}');
+          
+          // Ordenar por fecha de creación (si existe) o mantener el primero
+          entry.value.sort((a, b) {
+            final fechaA = a.data()['fechaCreacion'] as Timestamp?;
+            final fechaB = b.data()['fechaCreacion'] as Timestamp?;
+            if (fechaA == null && fechaB == null) return 0;
+            if (fechaA == null) return 1;
+            if (fechaB == null) return -1;
+            return fechaB.compareTo(fechaA); // Más reciente primero
+          });
+          
+          // Eliminar todos excepto el primero (más reciente)
+          for (int i = 1; i < entry.value.length; i++) {
+            await entry.value[i].reference.delete();
+            eliminados++;
+          }
+        }
+      }
+      
+      dev.log('✅ Limpieza completada: $eliminados duplicados eliminados', name: 'AdminFirestoreService');
+      
+      return {
+        'exito': true,
+        'eliminados': eliminados,
+        'duplicados': duplicadosEncontrados,
+      };
+    } catch (e) {
+      dev.log('❌ Error limpiando duplicados: $e', name: 'AdminFirestoreService');
+      return {
+        'exito': false,
+        'error': e.toString(),
+      };
+    }
   }
 }

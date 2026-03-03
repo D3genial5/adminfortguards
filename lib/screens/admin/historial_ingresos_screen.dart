@@ -126,7 +126,7 @@ class _HistorialIngresosScreenState extends State<HistorialIngresosScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF6EEE3),
       appBar: AppBar(
         title: const Text('Historial de Ingresos'),
         backgroundColor: const Color(0xFF00C853),
@@ -466,6 +466,10 @@ class _HistorialIngresosScreenState extends State<HistorialIngresosScreen> {
 
     final hora = DateFormat('HH:mm').format(registro.fechaIngreso);
     final esPropietario = registro.tipoUsuario == 'propietario';
+    final yaSalio = registro.estado == 'salido' || registro.fechaSalida != null;
+    final horaSalida = registro.fechaSalida != null 
+        ? DateFormat('HH:mm').format(registro.fechaSalida!) 
+        : null;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -473,6 +477,7 @@ class _HistorialIngresosScreenState extends State<HistorialIngresosScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: yaSalio ? Border.all(color: Colors.orange.withValues(alpha: 0.3), width: 1) : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -481,134 +486,254 @@ class _HistorialIngresosScreenState extends State<HistorialIngresosScreen> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          // Avatar
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: esPropietario
-                    ? [const Color(0xFF00C853), const Color(0xFF00E676)]
-                    : [const Color(0xFF667EEA), const Color(0xFF764BA2)],
-              ),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Center(
-              child: Text(
-                iniciales,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+          Row(
+            children: [
+              // Avatar
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: esPropietario
+                        ? [const Color(0xFF00C853), const Color(0xFF00E676)]
+                        : [const Color(0xFF667EEA), const Color(0xFF764BA2)],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Center(
+                  child: Text(
+                    iniciales,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(width: 14),
+              const SizedBox(width: 14),
 
-          // Info principal
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+              // Info principal
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        registro.usuarioNombre,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF1A1A2E),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            registro.usuarioNombre,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1A1A2E),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: esPropietario
+                                ? const Color(0xFF00C853).withValues(alpha: 0.1)
+                                : const Color(0xFF667EEA).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            esPropietario ? 'Propietario' : 'Visitante',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: esPropietario
+                                  ? const Color(0xFF00C853)
+                                  : const Color(0xFF667EEA),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: esPropietario
-                            ? const Color(0xFF00C853).withValues(alpha: 0.1)
-                            : const Color(0xFF667EEA).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        esPropietario ? 'Propietario' : 'Visitante',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: esPropietario
-                              ? const Color(0xFF00C853)
-                              : const Color(0xFF667EEA),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        if (registro.visitanteCI != null) ...[
+                          Icon(Icons.badge_outlined, size: 14, color: Colors.grey[400]),
+                          const SizedBox(width: 4),
+                          Text(
+                            registro.visitanteCI!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                        Icon(Icons.home_outlined, size: 14, color: Colors.grey[400]),
+                        const SizedBox(width: 4),
+                        Text(
+                          registro.casa ?? 'N/A',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
                         ),
-                      ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        // Hora de ingreso
+                        Icon(Icons.login_rounded, size: 14, color: const Color(0xFF00C853)),
+                        const SizedBox(width: 4),
+                        Text(
+                          hora,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF00C853),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        // Hora de salida si existe
+                        if (yaSalio && horaSalida != null) ...[
+                          const SizedBox(width: 12),
+                          Icon(Icons.logout_rounded, size: 14, color: Colors.orange),
+                          const SizedBox(width: 4),
+                          Text(
+                            horaSalida,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(width: 12),
+                        Icon(Icons.security, size: 14, color: Colors.grey[400]),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            registro.guardiaNombre,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[500],
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    if (registro.visitanteCI != null) ...[
-                      Icon(Icons.badge_outlined, size: 14, color: Colors.grey[400]),
-                      const SizedBox(width: 4),
-                      Text(
-                        registro.visitanteCI!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                    ],
-                    Icon(Icons.home_outlined, size: 14, color: Colors.grey[400]),
-                    const SizedBox(width: 4),
-                    Text(
-                      registro.casa ?? 'N/A',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
+              ),
+            ],
+          ),
+          // Botón para registrar salida si aún no ha salido
+          if (!yaSalio) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _registrarSalida(registro),
+                icon: const Icon(Icons.logout_rounded, size: 18),
+                label: const Text('Registrar Salida'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.orange,
+                  side: const BorderSide(color: Colors.orange),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(Icons.access_time, size: 14, color: Colors.grey[400]),
-                    const SizedBox(width: 4),
-                    Text(
-                      hora,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Icon(Icons.security, size: 14, color: Colors.grey[400]),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        registro.guardiaNombre,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[500],
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
+          ],
+          // Estado de salida si ya salió
+          if (yaSalio) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.check_circle_outline, size: 16, color: Colors.orange),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Salida registrada',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.orange[700],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _registrarSalida(RegistroIngresoModel registro) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Registrar Salida'),
+        content: Text('¿Confirmar salida de ${registro.usuarioNombre}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Confirmar'),
           ),
         ],
       ),
     );
+
+    if (confirmar == true) {
+      try {
+        await RegistroIngresoService.registrarSalida(registro.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text('Salida de ${registro.usuarioNombre} registrada'),
+                ],
+              ),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+          _cargarDatos();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
   Widget _buildEmptyState() {

@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class ReservaModel {
   final String id;
   final String condominioId;
@@ -54,20 +56,40 @@ class ReservaModel {
   }
 
   factory ReservaModel.fromMap(Map<String, dynamic> map) {
+    DateTime parseDate(dynamic value) {
+      if (value == null) return DateTime.now();
+      if (value is DateTime) return value;
+      if (value is Timestamp) return value.toDate();
+      if (value is String) {
+        try {
+          return DateTime.parse(value);
+        } catch (_) {
+          return DateTime.now();
+        }
+      }
+      return DateTime.now();
+    }
+
+    final String rawEstado = (map['estado'] ?? 'pendiente').toString();
+    final String estadoNormalizado = rawEstado == 'confirmada' ? 'pendiente' : rawEstado;
+
+    final dynamic fechaReservaRaw = map['fechaReserva'] ?? map['fecha'];
+    final dynamic fechaSolicitudRaw = map['fechaSolicitud'] ?? map['creado'];
+
     return ReservaModel(
       id: map['id'] ?? '',
       condominioId: map['condominioId'] ?? '',
-      casaNumero: map['casaNumero'] ?? '',
+      casaNumero: map['casaNumero']?.toString() ?? '',
       propietario: map['propietario'] ?? '',
-      areaSocial: map['areaSocial'] ?? '',
-      fechaReserva: DateTime.parse(map['fechaReserva']),
+      areaSocial: map['areaSocial'] ?? map['areaNombre'] ?? map['areaId'] ?? '',
+      fechaReserva: parseDate(fechaReservaRaw),
       horaInicio: map['horaInicio'] ?? '',
       horaFin: map['horaFin'] ?? '',
-      estado: map['estado'] ?? 'pendiente',
+      estado: estadoNormalizado,
       costoAdicional: map['costoAdicional']?.toDouble(),
       motivoRechazo: map['motivoRechazo'],
       observaciones: map['observaciones'],
-      fechaSolicitud: DateTime.parse(map['fechaSolicitud']),
+      fechaSolicitud: parseDate(fechaSolicitudRaw),
       aprobadoPor: map['aprobadoPor'],
       fechaAprobacion: map['fechaAprobacion'] != null 
           ? DateTime.parse(map['fechaAprobacion']) 

@@ -40,10 +40,17 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> with Single
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add_rounded),
-            onPressed: () => _mostrarFormularioNotificacion(),
-            tooltip: 'Nueva Notificación',
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: IconButton(
+              icon: Icon(Icons.add_rounded, color: Theme.of(context).colorScheme.primary),
+              onPressed: () => _mostrarFormularioNotificacion(),
+              tooltip: 'Nueva Notificación',
+            ),
           ),
         ],
         bottom: TabBar(

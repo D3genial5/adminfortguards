@@ -107,27 +107,26 @@ class _LoginSeguridadScreenState extends State<LoginSeguridadScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Header
-                Container(
-                  width: 70,
-                  height: 70,
-                  margin: const EdgeInsets.only(bottom: 24),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.shield_rounded,
-                    size: 35,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                // Logo FortGuard
+                Image.asset(
+                  'assets/fortguard_logo.png',
+                  width: 100,
+                  height: 100,
                 ),
+                const SizedBox(height: 16),
+                // Letras FortGuard
+                Image.asset(
+                  'assets/fortguard_letras.png',
+                  width: 200,
+                  height: 40,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(height: 8),
                 Text(
-                  'Acceso de Seguridad',
+                  'Seguridad',
                   style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 32),

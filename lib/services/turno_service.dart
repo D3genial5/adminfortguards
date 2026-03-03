@@ -4,6 +4,13 @@ import '../models/turno_model.dart';
 class TurnoService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String _collection = 'turnos';
+  static const String _turnosConfigCollection = 'turnos_config';
+  
+  // Obtener hora actual de Bolivia (UTC-4)
+  static DateTime get horaBolivia {
+    final utc = DateTime.now().toUtc();
+    return utc.subtract(const Duration(hours: 4));
+  }
 
   // Crear nuevo turno
   static Future<String> crear(TurnoModel turno) async {
@@ -18,7 +25,7 @@ class TurnoService {
   // Obtener turno actual (activo en este momento)
   static Future<TurnoModel?> obtenerTurnoActual(String condominioId) async {
     try {
-      final ahora = DateTime.now();
+      final ahora = horaBolivia; // Usar hora Bolivia
       final querySnapshot = await _firestore
           .collection(_collection)
           .where('condominioId', isEqualTo: condominioId)
@@ -35,6 +42,104 @@ class TurnoService {
     } catch (e) {
       throw Exception('Error al obtener turno actual: $e');
     }
+  }
+  
+  // Obtener configuración de turnos del condominio
+  static Future<List<Map<String, dynamic>>> obtenerConfigTurnos(String condominioId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('condominios')
+          .doc(condominioId)
+          .collection(_turnosConfigCollection)
+          .orderBy('horaInicio')
+          .get();
+      
+      return snapshot.docs.map((doc) => {
+        'id': doc.id,
+        ...doc.data(),
+      }).toList();
+    } catch (e) {
+      return [
+        {'nombre': 'Diurno', 'horaInicio': '06:00', 'horaFin': '18:00'},
+        {'nombre': 'Nocturno', 'horaInicio': '18:00', 'horaFin': '06:00'},
+      ];
+    }
+  }
+  
+  // Guardar configuración de turno
+  static Future<void> guardarConfigTurno(String condominioId, Map<String, dynamic> config) async {
+    try {
+      final collection = _firestore
+          .collection('condominios')
+          .doc(condominioId)
+          .collection(_turnosConfigCollection);
+      
+      if (config['id'] != null) {
+        await collection.doc(config['id']).update(config);
+      } else {
+        await collection.add(config);
+      }
+    } catch (e) {
+      throw Exception('Error al guardar config turno: $e');
+    }
+  }
+  
+  // Eliminar configuración de turno
+  static Future<void> eliminarConfigTurno(String condominioId, String turnoId) async {
+    try {
+      await _firestore
+          .collection('condominios')
+          .doc(condominioId)
+          .collection(_turnosConfigCollection)
+          .doc(turnoId)
+          .delete();
+    } catch (e) {
+      throw Exception('Error al eliminar config turno: $e');
+    }
+  }
+  
+  // Obtener turno activo según hora actual de Bolivia
+  static Future<Map<String, dynamic>?> obtenerTurnoActivoAutomatico(String condominioId) async {
+    try {
+      final ahora = horaBolivia;
+      final horaActual = '${ahora.hour.toString().padLeft(2, '0')}:${ahora.minute.toString().padLeft(2, '0')}';
+      
+      final configs = await obtenerConfigTurnos(condominioId);
+      
+      for (final config in configs) {
+        final horaInicio = config['horaInicio'] as String;
+        final horaFin = config['horaFin'] as String;
+        
+        // Verificar si la hora actual está dentro del rango
+        if (_estaEnRangoHorario(horaActual, horaInicio, horaFin)) {
+          return config;
+        }
+      }
+      
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  // Verificar si una hora está dentro de un rango (maneja turnos nocturnos)
+  static bool _estaEnRangoHorario(String horaActual, String horaInicio, String horaFin) {
+    final actual = _horaAMinutos(horaActual);
+    final inicio = _horaAMinutos(horaInicio);
+    final fin = _horaAMinutos(horaFin);
+    
+    if (inicio < fin) {
+      // Turno normal (ej: 06:00 - 18:00)
+      return actual >= inicio && actual < fin;
+    } else {
+      // Turno nocturno (ej: 18:00 - 06:00)
+      return actual >= inicio || actual < fin;
+    }
+  }
+  
+  static int _horaAMinutos(String hora) {
+    final partes = hora.split(':');
+    return int.parse(partes[0]) * 60 + int.parse(partes[1]);
   }
 
   // Stream del turno actual

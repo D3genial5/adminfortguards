@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class AccesoGeneralScreen extends StatelessWidget {
+class AccesoGeneralScreen extends StatefulWidget {
   const AccesoGeneralScreen({super.key});
 
+  @override
+  State<AccesoGeneralScreen> createState() => _AccesoGeneralScreenState();
+}
+
+class _AccesoGeneralScreenState extends State<AccesoGeneralScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -14,38 +19,28 @@ class AccesoGeneralScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo o título
+              // Logo FortGuard
               Container(
                 margin: const EdgeInsets.only(bottom: 48),
                 child: Column(
                   children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.security,
-                        size: 40,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                    Image.asset(
+                      'assets/fortguard_logo.png',
+                      width: 120,
+                      height: 120,
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'FORTGUARD',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                        letterSpacing: 2,
-                      ),
+                    const SizedBox(height: 20),
+                    Image.asset(
+                      'assets/fortguard_letras.png',
+                      width: 220,
+                      height: 45,
+                      fit: BoxFit.contain,
                     ),
+                    const SizedBox(height: 8),
                     Text(
                       'Administración',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         letterSpacing: 1,
                       ),

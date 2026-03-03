@@ -82,15 +82,18 @@ class _CrearGuardiaScreenState extends State<CrearGuardiaScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           children: [
             _buildSeccionDatosPersonales(),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             _buildSeccionTurno(),
-            const SizedBox(height: 24),
-            _buildSeccionEstado(),
+            if (_esEdicion) ...[
+              const SizedBox(height: 20),
+              _buildSeccionEstado(),
+            ],
             const SizedBox(height: 32),
             _buildBotones(),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -98,9 +101,21 @@ class _CrearGuardiaScreenState extends State<CrearGuardiaScreen> {
   }
 
   Widget _buildSeccionDatosPersonales() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -108,81 +123,90 @@ class _CrearGuardiaScreenState extends State<CrearGuardiaScreen> {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.person_rounded,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 24,
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.person_rounded,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 22,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Text(
                   'Datos Personales',
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _nombreController,
-                    decoration: InputDecoration(
-                      labelText: 'Nombre',
-                      prefixIcon: const Icon(Icons.person),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      fillColor: Theme.of(context).colorScheme.surface,
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Requerido';
-                      }
-                      return null;
-                    },
-                    textCapitalization: TextCapitalization.words,
-                  ),
+            TextFormField(
+              controller: _nombreController,
+              decoration: InputDecoration(
+                labelText: 'Nombre',
+                hintText: 'Ej: Juan',
+                prefixIcon: const Icon(Icons.badge_rounded, size: 20),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextFormField(
-                    controller: _apellidoController,
-                    decoration: InputDecoration(
-                      labelText: 'Apellido',
-                      prefixIcon: const Icon(Icons.person_outline),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      fillColor: Theme.of(context).colorScheme.surface,
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Requerido';
-                      }
-                      return null;
-                    },
-                    textCapitalization: TextCapitalization.words,
-                  ),
-                ),
-              ],
+                filled: true,
+                fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.08),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Requerido';
+                }
+                return null;
+              },
+              textCapitalization: TextCapitalization.words,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _apellidoController,
+              decoration: InputDecoration(
+                labelText: 'Apellido',
+                hintText: 'Ej: Pérez',
+                prefixIcon: const Icon(Icons.badge_outlined, size: 20),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.08),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Requerido';
+                }
+                return null;
+              },
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 12),
             TextFormField(
               controller: _emailController,
               decoration: InputDecoration(
                 labelText: 'Email',
-                prefixIcon: const Icon(Icons.email_rounded),
+                hintText: 'correo@ejemplo.com',
+                prefixIcon: const Icon(Icons.email_rounded, size: 20),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Theme.of(context).colorScheme.surface,
+                fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.08),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
               keyboardType: TextInputType.emailAddress,
               validator: (value) {
@@ -195,17 +219,20 @@ class _CrearGuardiaScreenState extends State<CrearGuardiaScreen> {
                 return null;
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             TextFormField(
               controller: _telefonoController,
               decoration: InputDecoration(
                 labelText: 'Teléfono',
-                prefixIcon: const Icon(Icons.phone_rounded),
+                hintText: 'Ej: 77712345',
+                prefixIcon: const Icon(Icons.phone_rounded, size: 20),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Theme.of(context).colorScheme.surface,
+                fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.08),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
               keyboardType: TextInputType.phone,
               validator: (value) {
@@ -225,198 +252,189 @@ class _CrearGuardiaScreenState extends State<CrearGuardiaScreen> {
   }
 
   Widget _buildSeccionTurno() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Turno de Trabajo
             Row(
               children: [
-                Icon(
-                  Icons.schedule_rounded,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 24,
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.schedule_rounded,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 22,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Text(
                   'Turno de Trabajo',
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            SegmentedButton<String>(
-              segments: [
-                ButtonSegment(
-                  value: 'diurno',
-                  label: const Text('Diurno'),
-                  icon: const Icon(Icons.wb_sunny_rounded),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildOpcionTurno(
+                    titulo: 'Diurno',
+                    subtitulo: '6:00 AM - 6:00 PM',
+                    icono: Icons.wb_sunny_rounded,
+                    color: Colors.orange,
+                    seleccionado: _turnoSeleccionado == 'diurno',
+                    onTap: () => setState(() => _turnoSeleccionado = 'diurno'),
+                  ),
                 ),
-                ButtonSegment(
-                  value: 'nocturno',
-                  label: const Text('Nocturno'),
-                  icon: const Icon(Icons.nightlight_rounded),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildOpcionTurno(
+                    titulo: 'Nocturno',
+                    subtitulo: '6:00 PM - 6:00 AM',
+                    icono: Icons.nightlight_rounded,
+                    color: Colors.indigo,
+                    seleccionado: _turnoSeleccionado == 'nocturno',
+                    onTap: () => setState(() => _turnoSeleccionado = 'nocturno'),
+                  ),
                 ),
               ],
-              selected: {_turnoSeleccionado},
-              onSelectionChanged: (Set<String> selection) {
-                setState(() {
-                  _turnoSeleccionado = selection.first;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: _turnoSeleccionado == 'diurno'
-                    ? Colors.orange.withValues(alpha: 0.1)
-                    : Colors.indigo.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _turnoSeleccionado == 'diurno'
-                      ? Colors.orange.withValues(alpha: 0.3)
-                      : Colors.indigo.withValues(alpha: 0.3),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    _turnoSeleccionado == 'diurno'
-                        ? Icons.wb_sunny_rounded
-                        : Icons.nightlight_rounded,
-                    color: _turnoSeleccionado == 'diurno'
-                        ? Colors.orange
-                        : Colors.indigo,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _turnoSeleccionado == 'diurno' ? 'Turno Diurno' : 'Turno Nocturno',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: _turnoSeleccionado == 'diurno'
-                                ? Colors.orange
-                                : Colors.indigo,
-                          ),
-                        ),
-                        Text(
-                          _turnoSeleccionado == 'diurno' ? '6:00 AM - 6:00 PM' : '6:00 PM - 6:00 AM',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
             ),
             const SizedBox(height: 24),
             
             // Tipo de Perfil
             Row(
               children: [
-                Icon(
-                  Icons.security_rounded,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 24,
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.security_rounded,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 22,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Text(
                   'Tipo de Perfil',
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            SegmentedButton<String>(
-              segments: [
-                ButtonSegment(
-                  value: 'recepcion',
-                  label: const Text('Recepción'),
-                  icon: const Icon(Icons.desk_rounded),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildOpcionTurno(
+                    titulo: 'Recepción',
+                    subtitulo: 'Control de acceso',
+                    icono: Icons.desk_rounded,
+                    color: Colors.blue,
+                    seleccionado: _tipoPerfilSeleccionado == 'recepcion',
+                    onTap: () => setState(() => _tipoPerfilSeleccionado = 'recepcion'),
+                  ),
                 ),
-                ButtonSegment(
-                  value: 'vigilancia',
-                  label: const Text('Vigilancia'),
-                  icon: const Icon(Icons.visibility_rounded),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildOpcionTurno(
+                    titulo: 'Vigilancia',
+                    subtitulo: 'Rondas y seguridad',
+                    icono: Icons.visibility_rounded,
+                    color: Colors.green,
+                    seleccionado: _tipoPerfilSeleccionado == 'vigilancia',
+                    onTap: () => setState(() => _tipoPerfilSeleccionado = 'vigilancia'),
+                  ),
                 ),
               ],
-              selected: {_tipoPerfilSeleccionado},
-              onSelectionChanged: (Set<String> selection) {
-                setState(() {
-                  _tipoPerfilSeleccionado = selection.first;
-                });
-              },
             ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: _tipoPerfilSeleccionado == 'recepcion'
-                    ? Colors.blue.withValues(alpha: 0.1)
-                    : Colors.green.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _tipoPerfilSeleccionado == 'recepcion'
-                      ? Colors.blue.withValues(alpha: 0.3)
-                      : Colors.green.withValues(alpha: 0.3),
-                ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOpcionTurno({
+    required String titulo,
+    required String subtitulo,
+    required IconData icono,
+    required Color color,
+    required bool seleccionado,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: seleccionado 
+              ? color.withValues(alpha: 0.15)
+              : (isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.withValues(alpha: 0.05)),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: seleccionado ? color : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icono,
+              color: seleccionado ? color : (isDark ? Colors.white54 : Colors.grey),
+              size: 28,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              titulo,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: seleccionado ? color : (isDark ? Colors.white70 : Colors.black54),
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    _tipoPerfilSeleccionado == 'recepcion'
-                        ? Icons.desk_rounded
-                        : Icons.visibility_rounded,
-                    color: _tipoPerfilSeleccionado == 'recepcion'
-                        ? Colors.blue
-                        : Colors.green,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _tipoPerfilSeleccionado == 'recepcion' ? 'Guardia de Recepción' : 'Guardia de Vigilancia',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: _tipoPerfilSeleccionado == 'recepcion'
-                                ? Colors.blue
-                                : Colors.green,
-                          ),
-                        ),
-                        Text(
-                          _tipoPerfilSeleccionado == 'recepcion' 
-                              ? 'Atención en recepción y control de acceso'
-                              : 'Rondas de vigilancia y seguridad perimetral',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitulo,
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark ? Colors.white38 : Colors.black38,
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -425,55 +443,68 @@ class _CrearGuardiaScreenState extends State<CrearGuardiaScreen> {
   }
 
   Widget _buildSeccionEstado() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.toggle_on_rounded,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Estado',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-              ],
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: (_activo ? Colors.green : Colors.grey).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                _activo ? Icons.check_circle_rounded : Icons.pause_circle_rounded,
+                color: _activo ? Colors.green : Colors.grey,
+                size: 22,
+              ),
             ),
-            const SizedBox(height: 20),
-            SwitchListTile(
-              title: Text(
-                _activo ? 'Guardia Activo' : 'Guardia Inactivo',
-                style: const TextStyle(fontWeight: FontWeight.w500),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _activo ? 'Guardia Activo' : 'Guardia Inactivo',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _activo 
+                        ? 'Disponible para turnos'
+                        : 'No disponible',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white54 : Colors.black45,
+                    ),
+                  ),
+                ],
               ),
-              subtitle: Text(
-                _activo 
-                    ? 'El guardia puede ser asignado a turnos'
-                    : 'El guardia no estará disponible para turnos',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
-              ),
+            ),
+            Switch.adaptive(
               value: _activo,
-              onChanged: (value) {
-                setState(() {
-                  _activo = value;
-                });
-              },
-              activeColor: Theme.of(context).colorScheme.primary,
-              contentPadding: EdgeInsets.zero,
+              onChanged: (value) => setState(() => _activo = value),
+              activeColor: Colors.green,
             ),
           ],
         ),
@@ -482,46 +513,61 @@ class _CrearGuardiaScreenState extends State<CrearGuardiaScreen> {
   }
 
   Widget _buildBotones() {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: _guardando ? null : () => Navigator.pop(context),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _guardando ? null : () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+                  ),
+                ),
+                child: const Text('Cancelar'),
               ),
             ),
-            child: const Text('Cancelar'),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          flex: 2,
-          child: ElevatedButton(
-            onPressed: _guardando ? null : _guardarGuardia,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 2,
+              child: ElevatedButton(
+                onPressed: _guardando ? null : _guardarGuardia,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                child: _guardando
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : Text(
+                        _esEdicion ? 'Actualizar' : 'Crear Guardia',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
               ),
             ),
-            child: _guardando
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : Text(_esEdicion ? 'Actualizar' : 'Crear Guardia'),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 

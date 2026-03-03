@@ -108,7 +108,7 @@ class ReservasService {
     });
   }
 
-  // Obtener áreas sociales
+  // Obtener áreas sociales (sincronizado con app propietarios - colección unificada)
   static Stream<List<AreaSocialModel>> streamAreasSociales(String condominioId) {
     if (_db == null) {
       return Stream.value(_getDefaultAreasSociales());
@@ -117,7 +117,7 @@ class ReservasService {
     return _db!
         .collection('condominios')
         .doc(condominioId)
-        .collection('areas_sociales')
+        .collection('areas_comunes') // Colección unificada
         .where('activa', isEqualTo: true)
         .snapshots()
         .map((snapshot) {
@@ -128,12 +128,17 @@ class ReservasService {
       return snapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
+        // Mapear campos de la nueva estructura
+        data['costoReserva'] = data['precioAdelanto'] ?? 0.0;
+        data['capacidadMaxima'] = data['capacidad'] ?? 10;
+        data['horariosDisponibles'] = ['${data['horaInicio'] ?? '08:00'}-${data['horaFin'] ?? '22:00'}'];
+        data['requiereAprobacion'] = true;
         return AreaSocialModel.fromMap(data);
       }).toList();
     });
   }
 
-  // Crear áreas sociales por defecto
+  // Crear áreas sociales por defecto (colección unificada)
   static Future<void> crearAreasSocialesDefault(String condominioId) async {
     if (_db == null) return;
 
@@ -144,10 +149,25 @@ class ReservasService {
       final docRef = _db!
           .collection('condominios')
           .doc(condominioId)
-          .collection('areas_sociales')
+          .collection('areas_comunes') // Colección unificada
           .doc();
       
-      batch.set(docRef, area.toMap());
+      // Convertir al formato unificado
+      final data = {
+        'nombre': area.nombre,
+        'descripcion': area.descripcion,
+        'capacidad': area.capacidadMaxima,
+        'precioAdelanto': area.costoReserva,
+        'horaInicio': area.horariosDisponibles.isNotEmpty ? area.horariosDisponibles.first.split('-')[0] : '08:00',
+        'horaFin': area.horariosDisponibles.isNotEmpty ? area.horariosDisponibles.first.split('-')[1] : '22:00',
+        'horarioInicio': area.horariosDisponibles.isNotEmpty ? area.horariosDisponibles.first.split('-')[0] : '08:00',
+        'horarioFin': area.horariosDisponibles.isNotEmpty ? area.horariosDisponibles.first.split('-')[1] : '22:00',
+        'activa': true,
+        'imagenUrl': null,
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+      
+      batch.set(docRef, data);
     }
 
     await batch.commit();

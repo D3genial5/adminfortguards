@@ -204,14 +204,14 @@ class _CrearCondominioScreenState extends State<CrearCondominioScreen> {
     final isTablet = screenSize.width > 600;
     
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F3F6),
+      backgroundColor: const Color(0xFFF6EEE3),
       appBar: AppBar(
         title: const Text(
           'Crear Condominio',
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 18,
-            color: Color(0xFF1A2B4C),
+            color: Color(0xFF000000),
             letterSpacing: 0.3,
           ),
         ),
@@ -219,7 +219,7 @@ class _CrearCondominioScreenState extends State<CrearCondominioScreen> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Color(0xFF1A2B4C), size: 20),
+          icon: const Icon(Icons.arrow_back_ios_rounded, color: Color(0xFF000000), size: 20),
           onPressed: () => context.go('/lista'),
         ),
         bottom: PreferredSize(
@@ -259,9 +259,9 @@ class _CrearCondominioScreenState extends State<CrearCondominioScreen> {
                             height: 2.5,
                             decoration: BoxDecoration(
                               color: i < _currentPage
-                                  ? const Color(0xFF1A2B4C).withValues(alpha: 0.6)
+                                  ? const Color(0xFF000000).withValues(alpha: 0.6)
                                   : i == _currentPage
-                                      ? const Color(0xFF1A2B4C)
+                                      ? const Color(0xFF000000)
                                       : const Color(0xFFD0D4DA),
                               borderRadius: BorderRadius.circular(2),
                             ),
@@ -323,7 +323,7 @@ class _CrearCondominioScreenState extends State<CrearCondominioScreen> {
                           onPressed: _previousPage,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFE9ECEF),
-                            foregroundColor: const Color(0xFF1A2B4C),
+                            foregroundColor: const Color(0xFF000000),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -347,7 +347,7 @@ class _CrearCondominioScreenState extends State<CrearCondominioScreen> {
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF1A2B4C).withValues(alpha: 0.25),
+                              color: const Color(0xFF000000).withValues(alpha: 0.25),
                               blurRadius: 8,
                               offset: const Offset(0, 4),
                             ),
@@ -358,14 +358,14 @@ class _CrearCondominioScreenState extends State<CrearCondominioScreen> {
                               ? null 
                               : (_currentPage == 2 ? _crearCondominio : _nextPage),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1A2B4C),
+                            backgroundColor: const Color(0xFF000000),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                             elevation: 0,
-                            disabledBackgroundColor: const Color(0xFF1A2B4C).withValues(alpha: 0.6),
+                            disabledBackgroundColor: const Color(0xFF000000).withValues(alpha: 0.6),
                           ),
                           child: _isLoading
                               ? const SizedBox(
@@ -406,9 +406,9 @@ class _CrearCondominioScreenState extends State<CrearCondominioScreen> {
         fontSize: isTablet ? 13 : 12,
         fontWeight: isActive || isCompleted ? FontWeight.w600 : FontWeight.w400,
         color: isActive
-            ? const Color(0xFF1A2B4C)
+            ? const Color(0xFF000000)
             : isCompleted
-                ? const Color(0xFF1A2B4C).withValues(alpha: 0.6)
+                ? const Color(0xFF000000).withValues(alpha: 0.6)
                 : const Color(0xFF9CA3AF),
         letterSpacing: 0.2,
       ),
@@ -555,7 +555,7 @@ class _CrearCondominioScreenState extends State<CrearCondominioScreen> {
           hintText: hint,
           prefixIcon: Icon(
             icon,
-            color: const Color(0xFF1A2B4C).withValues(alpha: 0.7),
+            color: const Color(0xFF000000).withValues(alpha: 0.7),
             size: 22,
           ),
           labelStyle: const TextStyle(
@@ -579,7 +579,7 @@ class _CrearCondominioScreenState extends State<CrearCondominioScreen> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF1A2B4C), width: 1.8),
+            borderSide: const BorderSide(color: Color(0xFF000000), width: 1.8),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),

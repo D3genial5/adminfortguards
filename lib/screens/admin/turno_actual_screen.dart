@@ -75,18 +75,177 @@ class _TurnoActualScreenState extends State<TurnoActualScreen> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
+          _buildHoraBolivia(),
+          const SizedBox(height: 16),
+          _buildTurnoAutomaticoCard(),
+          const SizedBox(height: 16),
           _buildEstadoCard(
-            titulo: 'Sin Turno Activo',
+            titulo: 'Sin Turno Registrado',
             icono: Icons.schedule_rounded,
             color: Colors.orange,
-            contenido: 'No hay ningún guardia en turno en este momento.',
+            contenido: 'No hay ningún guardia con turno iniciado manualmente.',
           ),
           const SizedBox(height: 24),
           _buildAccionesRapidas(),
-          const SizedBox(height: 24),
-          _buildProximosTurnos(),
         ],
       ),
+    );
+  }
+
+  Widget _buildHoraBolivia() {
+    final horaBolivia = TurnoService.horaBolivia;
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(
+              Icons.access_time,
+              color: Theme.of(context).colorScheme.primary,
+              size: 32,
+            ),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Hora Bolivia (UTC-4)',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    fontSize: 12,
+                  ),
+                ),
+                Text(
+                  '${horaBolivia.hour.toString().padLeft(2, '0')}:${horaBolivia.minute.toString().padLeft(2, '0')}',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            Text(
+              '${horaBolivia.day}/${horaBolivia.month}/${horaBolivia.year}',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTurnoAutomaticoCard() {
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: TurnoService.obtenerTurnoActivoAutomatico(widget.condominioId),
+      builder: (context, snapshot) {
+        final turnoConfig = snapshot.data;
+        final horaBolivia = TurnoService.horaBolivia;
+        final esDiurno = horaBolivia.hour >= 6 && horaBolivia.hour < 18;
+        
+        return Card(
+          elevation: 4,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: esDiurno
+                    ? [Colors.orange.shade400, Colors.orange.shade600]
+                    : [Colors.indigo.shade400, Colors.indigo.shade600],
+              ),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                      child: Icon(
+                        esDiurno ? Icons.wb_sunny_rounded : Icons.nightlight_rounded,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Turno Automático Activo',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              fontSize: 12,
+                            ),
+                          ),
+                          Text(
+                            turnoConfig?['nombre'] ?? (esDiurno ? 'Diurno' : 'Nocturno'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '${turnoConfig?['horaInicio'] ?? (esDiurno ? '06:00' : '18:00')} - ${turnoConfig?['horaFin'] ?? (esDiurno ? '18:00' : '06:00')}',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Colors.greenAccent,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'AUTO',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -612,12 +771,18 @@ class _TurnoActualScreenState extends State<TurnoActualScreen> {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () => _iniciarTurno('diurno'),
-                    icon: const Icon(Icons.wb_sunny_rounded),
-                    label: const Text('Iniciar Diurno'),
+                    icon: const Icon(Icons.wb_sunny_rounded, size: 18),
+                    label: const Text(
+                      'Diurno',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                      minimumSize: const Size(0, 44),
+                      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -628,12 +793,18 @@ class _TurnoActualScreenState extends State<TurnoActualScreen> {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () => _iniciarTurno('nocturno'),
-                    icon: const Icon(Icons.nightlight_rounded),
-                    label: const Text('Iniciar Nocturno'),
+                    icon: const Icon(Icons.nightlight_rounded, size: 18),
+                    label: const Text(
+                      'Nocturno',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.indigo,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                      minimumSize: const Size(0, 44),
+                      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -641,38 +812,6 @@ class _TurnoActualScreenState extends State<TurnoActualScreen> {
                   ),
                 ),
               ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProximosTurnos() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Próximos Turnos',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Center(
-              child: Text(
-                'Funcionalidad próximamente',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
-              ),
             ),
           ],
         ),

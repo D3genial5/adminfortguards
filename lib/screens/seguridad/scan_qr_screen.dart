@@ -16,7 +16,9 @@ class ScanQrScreen extends StatefulWidget {
 }
 
 class _ScanQrScreenState extends State<ScanQrScreen> {
-  final MobileScannerController _controller = MobileScannerController();
+  final MobileScannerController _controller = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+  );
   bool _isProcessing = false;
   String? _errorMessage;
   String _guardiaInfo = 'Guardia: No identificado';
@@ -145,20 +147,34 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
           'placa': visitanteInfo?['placa'] ?? solicitud['placa'],
         };
         
-        // Decrementar usos si aplica
-        if (tipoAcceso != 'indefinido' && usosRestantes != null && usosRestantes > 0) {
-          await FirebaseFirestore.instance
-              .collection('access_requests')
-              .doc(solicitudId)
-              .update({'usosRestantes': usosRestantes - 1});
-        }
-        
       } else if (qrData.startsWith('{')) {
         // Formato JSON legacy
         qrInfo = json.decode(qrData);
       } else if (qrData.contains('CONDO:') && qrData.contains('CASA:')) {
-        // Formato texto legacy: CONDO:Sky|CASA:Casa 320
+        // Formato con tipo de acceso: ENTRADA|SESSION:xxx|CONDO:Sky|CASA:Casa 320
+        // O formato legacy: CONDO:Sky|CASA:Casa 320
         final parts = qrData.split('|');
+        
+        // Detectar tipo, sesión y datos del visitante embebidos en el QR
+        String? tipoQr;
+        String? sessionId;
+        String? ciFromQr;
+        String? nombreFromQr;
+        bool origenCodigoCasa = false;
+        for (final part in parts) {
+          if (part == 'ENTRADA' || part == 'SALIDA') {
+            tipoQr = part;
+          } else if (part.startsWith('SESSION:')) {
+            sessionId = part.substring(8);
+          } else if (part == 'ORIGEN:CASA') {
+            origenCodigoCasa = true;
+          } else if (part.startsWith('CI:')) {
+            ciFromQr = part.substring(3);
+          } else if (part.startsWith('NOMBRE:')) {
+            nombreFromQr = Uri.decodeComponent(part.substring(7));
+          }
+        }
+        
         final condoPart = parts.firstWhere((p) => p.startsWith('CONDO:'), orElse: () => '');
         final casaPart = parts.firstWhere((p) => p.startsWith('CASA:'), orElse: () => '');
         
@@ -166,32 +182,145 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
           throw Exception('Formato QR no válido');
         }
         
-        qrInfo = {
-          'condominio': condoPart.substring(6),
-          'casa': casaPart.substring(5),
-          'visitante': 'Propietario',
-        };
+        final condominio = condoPart.substring(6);
+        final casa = casaPart.substring(5);
         
         // Verificar condominio para formato legacy
-        if (qrInfo['condominio'] != condominioGuardia) {
+        if (condominio != condominioGuardia) {
           throw Exception('QR de otro condominio');
         }
+        
+        // Extraer número de casa
+        final casaNumMatch = RegExp(r'(\d+)').firstMatch(casa);
+        final casaNum = casaNumMatch != null ? int.parse(casaNumMatch.group(1)!) : 0;
+        
+        // IMPORTANTE: Consultar Firestore para obtener datos reales del visitante
+        int? usosRestantes;
+        String tipoAcceso = 'usos';
+        String nombreVisitante = nombreFromQr ?? 'Visitante';
+        String? ciVisitante = ciFromQr;
+        String? fotoFrente;
+        String? fotoReverso;
+        
+        try {
+          final casaDoc = await FirebaseFirestore.instance
+              .collection('condominios')
+              .doc(condominio)
+              .collection('casas')
+              .doc(casaNum.toString())
+              .get();
+          
+          if (casaDoc.exists) {
+            final data = casaDoc.data();
+            
+            // Obtener usos del código
+            usosRestantes = data?['codigoUsos'] as int?;
+            tipoAcceso = usosRestantes != null ? 'usos' : 'indefinido';
+            
+            // Obtener datos del ÚLTIMO visitante que ingresó el código
+            nombreVisitante = nombreVisitante == 'Visitante'
+                ? (data?['ultimoVisitanteNombre'] as String? ?? 'Visitante')
+                : nombreVisitante;
+            ciVisitante ??= data?['ultimoVisitanteCI'] as String?;
+            fotoFrente = data?['ultimoVisitanteFotoFrente'] as String?;
+            fotoReverso = data?['ultimoVisitanteFotoReverso'] as String?;
+          }
+        } catch (e) {
+          dev.log('Error consultando datos de la casa: $e', name: 'ScanQrScreen');
+        }
+        
+        qrInfo = {
+          'condominio': condominio,
+          'casa': casa,
+          'casaNumero': casaNum,
+          'visitante': nombreVisitante,
+          'ci': ciVisitante,
+          'tipoAcceso': tipoAcceso,
+          'usosRestantes': usosRestantes,
+          'fotoCarnetFrente': fotoFrente,
+          'fotoCarnetReverso': fotoReverso,
+          'sessionId': sessionId,
+          'tipoQr': tipoQr,
+          'origenCodigoCasa': origenCodigoCasa,
+        };
       } else {
         throw Exception('Formato QR no reconocido');
       }
 
-      // Registrar el ingreso
-      await RegistroIngresoService.registrarIngreso(
-        guardiaId: guardiaId,
-        guardiaNombre: '${widget.guardiaData!['nombre']} ${widget.guardiaData!['apellido']}',
-        condominio: condominioGuardia,
-        datosQR: qrInfo,
-      );
+      // DETECCIÓN AUTOMÁTICA: Verificar si ya tiene un ingreso activo
+      // IMPORTANTE: Solo detectar entrada/salida para visitantes CON CI
+      // Para códigos de casa SIN CI, SIEMPRE es ENTRADA
+      final ci = qrInfo['ci'] as String?;
+      final tipoQr = qrInfo['tipoQr'] as String?;
+      final sessionId = qrInfo['sessionId'] as String?;
+      bool esEntrada = true;
+      String? registroActivoId;
+
+      Future<QuerySnapshot<Map<String, dynamic>>> buscarRegistroActivo() {
+        Query<Map<String, dynamic>> query = FirebaseFirestore.instance
+            .collection('registros_ingreso')
+            .where('condominio', isEqualTo: condominioGuardia)
+            .where('estado', isEqualTo: 'ingresado');
+
+        if (sessionId != null && sessionId.isNotEmpty) {
+          query = query.where('sessionId', isEqualTo: sessionId);
+        } else if (ci != null && ci.isNotEmpty) {
+          query = query.where('visitanteCI', isEqualTo: ci);
+        }
+
+        return query.limit(1).get();
+      }
+
+      if (tipoQr == 'SALIDA') {
+        final registrosActivos = await buscarRegistroActivo();
+        if (registrosActivos.docs.isEmpty) {
+          throw Exception('No hay ingreso activo para este QR');
+        }
+        esEntrada = false;
+        registroActivoId = registrosActivos.docs.first.id;
+      } else if (tipoQr == 'ENTRADA') {
+        final registrosActivos = await buscarRegistroActivo();
+        if (registrosActivos.docs.isNotEmpty) {
+          throw Exception('Ya existe un ingreso activo para este QR');
+        }
+        esEntrada = true;
+      } else if (ci != null && ci.isNotEmpty) {
+        // Fallback legacy: detectar por CI
+        final registrosActivos = await buscarRegistroActivo();
+        if (registrosActivos.docs.isNotEmpty) {
+          esEntrada = false;
+          registroActivoId = registrosActivos.docs.first.id;
+        }
+      }
+      
+      // Registrar entrada o salida según corresponda
+      if (esEntrada) {
+        // ENTRADA: Crear nuevo registro
+        // NOTA: Los usos ya fueron decrementados cuando el visitante ingresó el código
+        // en ingreso_casa_screen.dart mediante CodigoCasaUtil.verificarCodigo()
+        await RegistroIngresoService.registrarIngreso(
+          guardiaId: guardiaId,
+          guardiaNombre: '${widget.guardiaData!['nombre']} ${widget.guardiaData!['apellido']}',
+          condominio: condominioGuardia,
+          datosQR: qrInfo,
+        );
+
+        // Para solicitudes de invitados/visitas: sincronizar estado y usos
+        final usosActualizados = await _actualizarSolicitudPostEntrada(qrInfo);
+        if (usosActualizados != null) {
+          qrInfo['usosRestantes'] = usosActualizados;
+        }
+      } else {
+        // SALIDA: Actualizar registro existente
+        if (registroActivoId != null) {
+          await RegistroIngresoService.registrarSalida(registroActivoId);
+        }
+      }
 
       if (!mounted) return;
 
-      // Mostrar confirmación con datos completos
-      _mostrarConfirmacionCompleta(qrInfo);
+      // Mostrar confirmación con tipo de operación
+      _mostrarConfirmacionCompleta(qrInfo, esEntrada: esEntrada);
       
     } catch (e) {
       dev.log('Error procesando QR: $e', name: 'ScanQrScreen');
@@ -209,7 +338,68 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
     }
   }
 
-  void _mostrarConfirmacionCompleta(Map<String, dynamic> qrInfo) {
+  Future<int?> _actualizarSolicitudPostEntrada(Map<String, dynamic> qrInfo) async {
+    if (qrInfo['origenCodigoCasa'] == true) {
+      return null;
+    }
+
+    final solicitudId = qrInfo['solicitudId'] as String?;
+
+    if (solicitudId != null && solicitudId.isNotEmpty) {
+      final ref = FirebaseFirestore.instance.collection('access_requests').doc(solicitudId);
+      return _aplicarActualizacionSolicitud(ref);
+    }
+
+    final condominio = qrInfo['condominio']?.toString();
+    final casaNumero = qrInfo['casaNumero'] as int?;
+    final ci = qrInfo['ci']?.toString();
+    if (condominio == null || casaNumero == null || ci == null || ci.isEmpty) {
+      return null;
+    }
+
+    final query = await FirebaseFirestore.instance
+        .collection('access_requests')
+        .where('condominio', isEqualTo: condominio)
+        .where('casaNumero', isEqualTo: casaNumero)
+        .where('ci', isEqualTo: ci)
+        .where('estado', isEqualTo: 'aceptada')
+        .limit(1)
+        .get();
+
+    if (query.docs.isEmpty) return null;
+    return _aplicarActualizacionSolicitud(query.docs.first.reference);
+  }
+
+  Future<int?> _aplicarActualizacionSolicitud(DocumentReference<Map<String, dynamic>> ref) async {
+    return FirebaseFirestore.instance.runTransaction<int?>((tx) async {
+      final snap = await tx.get(ref);
+      if (!snap.exists) return null;
+
+      final data = snap.data()!;
+      final tipoAcceso = data['tipoAcceso']?.toString() ?? 'usos';
+      final usosActuales = (data['usosRestantes'] as num?)?.toInt() ??
+          (data['codigoUsos'] as num?)?.toInt();
+
+      final updates = <String, dynamic>{
+        'entradaVerificada': true,
+        'fechaEntrada': FieldValue.serverTimestamp(),
+      };
+
+      int? nuevosUsos;
+      if (tipoAcceso != 'indefinido' && usosActuales != null) {
+        if (usosActuales <= 0) {
+          throw Exception('QR sin usos restantes');
+        }
+        nuevosUsos = usosActuales - 1;
+        updates['usosRestantes'] = nuevosUsos;
+      }
+
+      tx.update(ref, updates);
+      return nuevosUsos;
+    });
+  }
+
+  void _mostrarConfirmacionCompleta(Map<String, dynamic> qrInfo, {required bool esEntrada}) {
     final fotoFrente = qrInfo['fotoCarnetFrente'] as String?;
     final fotoReverso = qrInfo['fotoCarnetReverso'] as String?;
     final tipoAcceso = qrInfo['tipoAcceso'] as String?;
@@ -242,7 +432,7 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.green.withValues(alpha: 0.3),
+                    color: (esEntrada ? Colors.green : Colors.orange).withValues(alpha: 0.3),
                     blurRadius: 40,
                     spreadRadius: 5,
                   ),
@@ -252,17 +442,19 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Header con gradiente verde
+                    // Header con gradiente dinámico (verde=entrada, naranja=salida)
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [Color(0xFF00C853), Color(0xFF00E676)],
+                          colors: esEntrada 
+                            ? [const Color(0xFF00C853), const Color(0xFF00E676)]
+                            : [const Color(0xFFFF6F00), const Color(0xFFFF9800)],
                         ),
-                        borderRadius: BorderRadius.only(
+                        borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(28),
                           topRight: Radius.circular(28),
                         ),
@@ -282,17 +474,17 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
                                 color: Colors.white,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
-                                Icons.check_rounded,
-                                color: Color(0xFF00C853),
+                              child: Icon(
+                                esEntrada ? Icons.login_rounded : Icons.logout_rounded,
+                                color: esEntrada ? const Color(0xFF00C853) : const Color(0xFFFF6F00),
                                 size: 40,
                               ),
                             ),
                           ),
                           const SizedBox(height: 16),
-                          const Text(
-                            '¡Acceso Autorizado!',
-                            style: TextStyle(
+                          Text(
+                            esEntrada ? '¡Entrada Verificada!' : '¡Salida Registrada!',
+                            style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
@@ -447,8 +639,8 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
                                     iconColor: const Color(0xFFAB47BC),
                                     iconBgColor: const Color(0xFFF3E5F5),
                                     label: 'Usos restantes',
-                                    value: '${(usosRestantes ?? 1) - 1}',
-                                    badge: '${(usosRestantes ?? 1) - 1}',
+                                    value: '${usosRestantes ?? 0}',
+                                    badge: '${usosRestantes ?? 0}',
                                   ),
                                 ],
                                 
@@ -562,8 +754,10 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
                             height: 56,
                             child: ElevatedButton(
                               onPressed: () {
-                                Navigator.of(context).pop();
-                                GoRouter.of(this.context).pop();
+                                // Solo cerrar el diálogo, NO hacer doble pop
+                                if (mounted) {
+                                  Navigator.of(context).pop();
+                                }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF00C853),

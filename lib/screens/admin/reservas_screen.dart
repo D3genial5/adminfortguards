@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/reserva_model.dart';
 import '../../services/reservas_service.dart';
+import 'gestion_areas_screen.dart';
 
 class ReservasScreen extends StatefulWidget {
   final String condominioId;
@@ -32,16 +33,35 @@ class _ReservasScreenState extends State<ReservasScreen> with SingleTickerProvid
     final isTablet = screenSize.width > 600;
     
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('Reservas'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.edit_location_alt_rounded),
+              color: Theme.of(context).colorScheme.primary,
+              onPressed: () => _mostrarGestionAreas(context),
+              tooltip: 'Gestionar Áreas Sociales',
+            ),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          unselectedLabelStyle: const TextStyle(fontSize: 14),
           tabs: const [
             Tab(text: 'Todas'),
             Tab(text: 'Pendientes'),
@@ -88,14 +108,14 @@ class _ReservasScreenState extends State<ReservasScreen> with SingleTickerProvid
                 Icon(
                   Icons.event_busy,
                   size: 64,
-                  color: Colors.grey[400],
+                  color: Theme.of(context).colorScheme.outline,
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'No hay reservas ${estado ?? ''}',
                   style: TextStyle(
                     fontSize: 18,
-                    color: Colors.grey[600],
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -149,6 +169,8 @@ class _ReservasScreenState extends State<ReservasScreen> with SingleTickerProvid
                 Expanded(
                   child: Text(
                     reserva.areaSocial,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: isTablet ? 18 : 16,
                       fontWeight: FontWeight.bold,
@@ -168,6 +190,8 @@ class _ReservasScreenState extends State<ReservasScreen> with SingleTickerProvid
                       const SizedBox(width: 4),
                       Text(
                         reserva.estado.toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: statusColor,
                           fontWeight: FontWeight.bold,
@@ -197,32 +221,56 @@ class _ReservasScreenState extends State<ReservasScreen> with SingleTickerProvid
             
             if (reserva.estado == 'pendiente') ...[
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _rechazarReserva(reserva),
-                      icon: const Icon(Icons.close, size: 18),
-                      label: const Text('Rechazar'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                      ),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxWidth < 360;
+
+                  final botonRechazar = OutlinedButton.icon(
+                    onPressed: () => _rechazarReserva(reserva),
+                    icon: const Icon(Icons.close, size: 18),
+                    label: const Text(
+                      'Rechazar',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _aprobarReserva(reserva),
-                      icon: const Icon(Icons.check, size: 18),
-                      label: const Text('Aprobar'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                      ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
                     ),
-                  ),
-                ],
+                  );
+
+                  final botonAprobar = ElevatedButton.icon(
+                    onPressed: () => _aprobarReserva(reserva),
+                    icon: const Icon(Icons.check, size: 18),
+                    label: const Text(
+                      'Aprobar',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                  );
+
+                  if (compact) {
+                    return Column(
+                      children: [
+                        SizedBox(width: double.infinity, child: botonRechazar),
+                        const SizedBox(height: 10),
+                        SizedBox(width: double.infinity, child: botonAprobar),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      Expanded(child: botonRechazar),
+                      const SizedBox(width: 12),
+                      Expanded(child: botonAprobar),
+                    ],
+                  );
+                },
               ),
             ],
           ],
@@ -243,7 +291,7 @@ class _ReservasScreenState extends State<ReservasScreen> with SingleTickerProvid
               label,
               style: TextStyle(
                 fontWeight: FontWeight.w500,
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 fontSize: isTablet ? 14 : 13,
               ),
             ),
@@ -251,12 +299,24 @@ class _ReservasScreenState extends State<ReservasScreen> with SingleTickerProvid
           Expanded(
             child: Text(
               value,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: isTablet ? 14 : 13,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _mostrarGestionAreas(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GestionAreasScreen(condominioId: widget.condominioId),
       ),
     );
   }
@@ -434,44 +494,66 @@ class _RechazarReservaDialog extends StatefulWidget {
 
 class _RechazarReservaDialogState extends State<_RechazarReservaDialog> {
   final _motivoController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Rechazar Reserva'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('¿Rechazar la reserva de ${widget.reserva.areaSocial}?'),
-          const SizedBox(height: 16),
-          
-          TextField(
-            controller: _motivoController,
-            decoration: const InputDecoration(
-              labelText: 'Motivo del rechazo *',
-              border: OutlineInputBorder(),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('¿Rechazar la reserva de ${widget.reserva.areaSocial}?'),
+            const SizedBox(height: 16),
+            
+            TextFormField(
+              controller: _motivoController,
+              decoration: const InputDecoration(
+                labelText: 'Motivo del rechazo *',
+                border: OutlineInputBorder(),
+                hintText: 'Escribe el motivo del rechazo',
+              ),
+              maxLines: 3,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'El motivo es requerido';
+                }
+                return null;
+              },
             ),
-            maxLines: 3,
-          ),
-        ],
+          ],
+        ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
         ),
         ElevatedButton(
-          onPressed: () {
-            if (_motivoController.text.trim().isNotEmpty) {
-              widget.onReject(_motivoController.text.trim());
-              Navigator.of(context).pop();
+          onPressed: _isLoading ? null : () async {
+            if (_formKey.currentState!.validate()) {
+              final navigator = Navigator.of(context);
+              setState(() => _isLoading = true);
+              await widget.onReject(_motivoController.text.trim());
+              if (mounted) {
+                navigator.pop();
+              }
             }
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red,
             foregroundColor: Colors.white,
           ),
-          child: const Text('Rechazar'),
+          child: _isLoading 
+            ? const SizedBox(
+                width: 20, 
+                height: 20, 
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)
+              )
+            : const Text('Rechazar'),
         ),
       ],
     );

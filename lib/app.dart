@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'services/theme_service.dart';
 
 import 'screens/admin/lista_condominios_screen.dart';
@@ -114,6 +115,18 @@ class AdminFortGuardApp extends StatelessWidget {
             themeMode: themeService.themeMode,
             routerConfig: _router,
             debugShowCheckedModeBanner: false,
+            // Localizaciones para español
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('es', 'ES'),
+              Locale('es'),
+              Locale('en'),
+            ],
+            locale: const Locale('es'),
             // Optimizaciones de rendimiento
             builder: (context, child) {
               return MediaQuery(

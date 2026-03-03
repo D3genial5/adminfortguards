@@ -38,13 +38,36 @@ class _VerCredencialesScreenState extends State<VerCredencialesScreen> {
           .get();
 
       if (mounted) {
+        // Eliminar duplicados basándose en tipo + condominio + casa (para propietarios)
+        // o email (para admins/guardias)
+        final seen = <String>{};
+        final credencialesSinDuplicados = <Map<String, dynamic>>[];
+        
+        for (final doc in querySnapshot.docs) {
+          final data = doc.data();
+          final tipo = data['tipo'] ?? '';
+          String uniqueKey;
+          
+          if (tipo == 'propietario') {
+            final condominio = data['condominio'] ?? '';
+            final casa = data['casa'] ?? '';
+            uniqueKey = 'prop_${condominio}_$casa';
+          } else {
+            final email = data['email'] ?? doc.id;
+            uniqueKey = '${tipo}_$email';
+          }
+          
+          if (!seen.contains(uniqueKey)) {
+            seen.add(uniqueKey);
+            credencialesSinDuplicados.add({
+              'id': doc.id,
+              ...data,
+            });
+          }
+        }
+        
         setState(() {
-          _credenciales = querySnapshot.docs
-              .map((doc) => {
-                    'id': doc.id,
-                    ...doc.data(),
-                  })
-              .toList();
+          _credenciales = credencialesSinDuplicados;
           _isLoading = false;
         });
       }
@@ -276,8 +299,6 @@ class _VerCredencialesScreenState extends State<VerCredencialesScreen> {
 
   // Constantes de color que funcionan en tema claro
   static const _turquoise = Color(0xFF47D9B2);
-  static const _darkGray = Color(0xFFF5F5F5);
-  static const _mediumGray = Color(0xFFFAFAFA);
   
   // Getter para acceder a colores del tema
   ColorScheme get _colors => Theme.of(context).colorScheme;
@@ -548,7 +569,7 @@ class _VerCredencialesScreenState extends State<VerCredencialesScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
-        color: _darkGray,
+        color: _colors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _turquoise.withValues(alpha: 0.2),
@@ -556,7 +577,7 @@ class _VerCredencialesScreenState extends State<VerCredencialesScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: _colors.shadow.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 2),
             spreadRadius: 0,
@@ -599,7 +620,7 @@ class _VerCredencialesScreenState extends State<VerCredencialesScreen> {
                         nombre,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: _colors.onSurface,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -648,14 +669,14 @@ class _VerCredencialesScreenState extends State<VerCredencialesScreen> {
             Text(
               'Condominio: $condominio',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: const Color(0xFFCCCCCC),
+                color: _colors.onSurface.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: _mediumGray,
+                color: _colors.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -696,7 +717,7 @@ class _VerCredencialesScreenState extends State<VerCredencialesScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
-        color: _darkGray,
+        color: _colors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _secondaryTurquoise.withValues(alpha: 0.2),
@@ -704,7 +725,7 @@ class _VerCredencialesScreenState extends State<VerCredencialesScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: _colors.shadow.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 2),
             spreadRadius: 0,
@@ -747,7 +768,7 @@ class _VerCredencialesScreenState extends State<VerCredencialesScreen> {
                         propietario,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: _colors.onSurface,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -763,7 +784,7 @@ class _VerCredencialesScreenState extends State<VerCredencialesScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: _mediumGray,
+                      color: _colors.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -772,7 +793,7 @@ class _VerCredencialesScreenState extends State<VerCredencialesScreen> {
                         Text(
                           'Condominio',
                           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: const Color(0xFFCCCCCC),
+                            color: _colors.onSurface.withValues(alpha: 0.7),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -781,7 +802,7 @@ class _VerCredencialesScreenState extends State<VerCredencialesScreen> {
                           condominio,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: _colors.onSurface,
                           ),
                         ),
                       ],
@@ -792,7 +813,7 @@ class _VerCredencialesScreenState extends State<VerCredencialesScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: _mediumGray,
+                    color: _colors.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
@@ -801,7 +822,7 @@ class _VerCredencialesScreenState extends State<VerCredencialesScreen> {
                       Text(
                         'Casa',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: const Color(0xFFCCCCCC),
+                          color: _colors.onSurface.withValues(alpha: 0.7),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -810,7 +831,7 @@ class _VerCredencialesScreenState extends State<VerCredencialesScreen> {
                         casa,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: _colors.onSurface,
                         ),
                       ),
                     ],
@@ -822,7 +843,7 @@ class _VerCredencialesScreenState extends State<VerCredencialesScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: _mediumGray,
+                color: _colors.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: _buildCompactCredentialRow(

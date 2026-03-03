@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/admin_firestore_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'editar_casa_screen.dart';
@@ -15,18 +14,33 @@ import 'reportes_expensas_screen.dart';
 import 'reservas_screen.dart';
 import 'gestion_qr_pago_screen.dart';
 import 'historial_ingresos_screen.dart';
+import 'alertas_admin_screen.dart';
 
-class AdminDashboardScreen extends StatelessWidget {
+class AdminDashboardScreen extends StatefulWidget {
   final String condominioId;
   const AdminDashboardScreen({super.key, required this.condominioId});
+
+  @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  String get condominioId => widget.condominioId;
 
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final isTablet = screenSize.width > 600;
     
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) {
+        if (!didPop) {
+          _volverASeleccionRol();
+        }
+      },
+      child: Scaffold(
+      backgroundColor: const Color(0xFFF6EEE3),
       appBar: AppBar(
         centerTitle: true,
         title: Text(
@@ -47,6 +61,13 @@ class AdminDashboardScreen extends StatelessWidget {
             tooltip: 'Menú',
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search_rounded),
+            onPressed: () => _mostrarBusqueda(context),
+            tooltip: 'Buscar casa',
+          ),
+        ],
       ),
       drawer: _buildDrawer(context, isTablet),
       body: FutureBuilder(
@@ -69,14 +90,14 @@ class AdminDashboardScreen extends StatelessWidget {
                 return const Center(child: Text('Sin casas registradas'));
               }
               return ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                padding: const EdgeInsets.only(left: 16, right: 16, top: 20, bottom: 100),
                 itemCount: docs.length,
                 itemBuilder: (context, index) {
                   final data = docs[index].data();
                   final numero = data['numero'];
                   final propietario = data['propietario'];
-                  final estadoExpensa = data['estadoExpensa'];
-                  final isPagada = estadoExpensa == 'pagada';
+                  final isPagada = _isExpensaPagada(data);
+                  final estadoLabel = isPagada ? 'Pagada' : 'Pendiente';
                   
                   return Container(
                     margin: const EdgeInsets.only(bottom: 16),
@@ -168,7 +189,7 @@ class AdminDashboardScreen extends StatelessWidget {
                                           ),
                                           const SizedBox(width: 6),
                                           Text(
-                                            'Expensa: $estadoExpensa',
+                                            'Expensa: $estadoLabel',
                                             style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w600,
@@ -210,7 +231,7 @@ class AdminDashboardScreen extends StatelessWidget {
                                     ));
                                   } else if (value == 'expensa') {
                                     Navigator.push(context, MaterialPageRoute(
-                                      builder: (_) => ExpensasScreen(condominioId: condominioId, numero: numero, estadoActual: estadoExpensa == 'pagada'),
+                                      builder: (_) => ExpensasScreen(condominioId: condominioId, numero: numero, estadoActual: isPagada),
                                     ));
                                   } else if (value == 'notificacion') {
                                     Navigator.push(context, MaterialPageRoute(
@@ -307,7 +328,23 @@ class AdminDashboardScreen extends StatelessWidget {
           ),
         ),
       ),
+      ),
     );
+  }
+
+  void _volverASeleccionRol() {
+    GoRouter.of(context).go('/');
+  }
+
+  bool _isExpensaPagada(Map<String, dynamic> data) {
+    final estado = data['estadoExpensa']?.toString().trim().toLowerCase() ?? '';
+    final expensasPagadasFlag = data['expensasPagadas'] == true;
+    final mesesAdelantados = (data['mesesAdelantados'] as num?)?.toInt() ?? 0;
+
+    return estado.contains('pagad') ||
+        estado.contains('adelant') ||
+        expensasPagadasFlag ||
+        mesesAdelantados > 0;
   }
 
   // Drawer methods
@@ -449,6 +486,22 @@ class AdminDashboardScreen extends StatelessWidget {
                   },
                   isTablet: isTablet,
                 ),
+                const SizedBox(height: 4),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.warning_amber_rounded,
+                  title: 'Alertas',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AlertasAdminScreen(condominioId: condominioId),
+                      ),
+                    );
+                  },
+                  isTablet: isTablet,
+                ),
                 SizedBox(height: isTablet ? 16 : 12),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -504,14 +557,9 @@ class AdminDashboardScreen extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () async {
-              final navigator = Navigator.of(context);
-              final router = GoRouter.of(context);
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.remove('admin_session');
-              if (!context.mounted) return;
-              navigator.pop();
-              router.go('/');
+            onTap: () {
+              Navigator.pop(context);
+              GoRouter.of(context).go('/');
             },
             borderRadius: BorderRadius.circular(12),
             child: Container(
@@ -690,6 +738,152 @@ class AdminDashboardScreen extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _mostrarBusqueda(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => _BuscarCasaDialog(condominioId: condominioId),
+    );
+  }
+}
+
+class _BuscarCasaDialog extends StatefulWidget {
+  final String condominioId;
+  const _BuscarCasaDialog({required this.condominioId});
+
+  @override
+  State<_BuscarCasaDialog> createState() => _BuscarCasaDialogState();
+}
+
+class _BuscarCasaDialogState extends State<_BuscarCasaDialog> {
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        constraints: const BoxConstraints(maxHeight: 500),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.search_rounded, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 12),
+                const Text(
+                  'Buscar Casa',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _searchController,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Número de casa o propietario...',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: Colors.grey[100],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              onChanged: (value) => setState(() => _query = value.toLowerCase()),
+            ),
+            const SizedBox(height: 16),
+            Flexible(
+              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: AdminFirestoreService.streamCasas(widget.condominioId),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  
+                  final allDocs = snapshot.data!.docs;
+                  final docs = _query.isEmpty
+                      ? allDocs
+                      : allDocs.where((doc) {
+                          final data = doc.data();
+                          final numero = data['numero']?.toString().toLowerCase() ?? '';
+                          final propietario = data['propietario']?.toString().toLowerCase() ?? '';
+                          return numero.contains(_query) || propietario.contains(_query);
+                        }).toList();
+                  
+                  if (docs.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.search_off, size: 48, color: Colors.grey[400]),
+                          const SizedBox(height: 8),
+                          Text('Sin resultados', style: TextStyle(color: Colors.grey[600])),
+                        ],
+                      ),
+                    );
+                  }
+                  
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final data = docs[index].data();
+                      final numero = data['numero'];
+                      final propietario = data['propietario'] ?? '';
+                      
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                          child: Text(
+                            numero.toString(),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        title: Text('Casa $numero'),
+                        subtitle: Text(propietario),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => EditarCasaScreen(
+                                condominioId: widget.condominioId,
+                                numero: numero,
+                                data: data,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );

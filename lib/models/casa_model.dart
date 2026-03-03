@@ -60,13 +60,16 @@ class CasaModel {
   }
 
   factory CasaModel.fromFirestore(Map<String, dynamic> data, String id) {
-    // Leer el estado de expensa desde el campo 'estadoExpensa' o 'expensasPagadas'
-    bool expensasPagadas = false;
-    if (data.containsKey('estadoExpensa')) {
-      expensasPagadas = data['estadoExpensa'] == 'pagada';
-    } else {
-      expensasPagadas = data['expensasPagadas'] ?? false;
-    }
+    // Leer estado de expensa de forma robusta.
+    // En datos históricos existen variantes como: "pagada", "Pagado", "PAGADA".
+    final estadoExpensaRaw = data['estadoExpensa']?.toString().trim().toLowerCase() ?? '';
+    final expensasPagadasFlag = data['expensasPagadas'] == true;
+    final mesesAdelantados = (data['mesesAdelantados'] as num?)?.toInt() ?? 0;
+
+    final expensasPagadas = estadoExpensaRaw.contains('pagad') ||
+        estadoExpensaRaw.contains('adelant') ||
+        expensasPagadasFlag ||
+        mesesAdelantados > 0;
     
     return CasaModel(
       id: id,
@@ -76,7 +79,7 @@ class CasaModel {
           ? List<String>.from(data['residentes']) 
           : [data['propietario'] ?? ''],
       expensasPagadas: expensasPagadas,
-      montoExpensas: (data['montoExpensas'] ?? 0.0).toDouble(),
+      montoExpensas: (data['montoPagado'] ?? data['montoExpensas'] ?? 0.0).toDouble(),
       fechaPago: data['fechaPago'] != null 
           ? (data['fechaPago'] as Timestamp).toDate() 
           : null,

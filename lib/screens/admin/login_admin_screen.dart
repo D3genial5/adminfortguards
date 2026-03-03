@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/auth_service.dart';
 
 class LoginAdminScreen extends StatefulWidget {
@@ -43,13 +42,6 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
     navigator.pop(); // cerrar diálogo de carga
 
     if (resultado != null) {
-      // Guardar datos del administrador en SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('admin_id', resultado['id'] ?? '');
-      await prefs.setString('admin_email', resultado['email'] ?? '');
-      await prefs.setString('admin_nombre', resultado['nombre'] ?? '');
-      await prefs.setString('admin_condominio', resultado['condominio'] ?? '');
-      
       // Navegar según tipo de admin
       final condominio = resultado['condominio'];
       if (condominio == 'Todos') {
@@ -104,27 +96,26 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Header
-                Container(
-                  width: 70,
-                  height: 70,
-                  margin: const EdgeInsets.only(bottom: 24),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.admin_panel_settings_rounded,
-                    size: 35,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                // Logo FortGuard
+                Image.asset(
+                  'assets/fortguard_logo.png',
+                  width: 100,
+                  height: 100,
                 ),
+                const SizedBox(height: 16),
+                // Letras FortGuard
+                Image.asset(
+                  'assets/fortguard_letras.png',
+                  width: 200,
+                  height: 40,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(height: 8),
                 Text(
-                  'Acceso Administrativo',
+                  'Administración',
                   style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 32),

@@ -19,9 +19,6 @@ class ReportesExpensasScreen extends StatefulWidget {
 class _ReportesExpensasScreenState extends State<ReportesExpensasScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _filtroEstado = 'todos'; // 'todos', 'pagadas', 'pendientes'
-  DateTime _fechaInicio = DateTime.now().subtract(const Duration(days: 30));
-  DateTime _fechaFin = DateTime.now();
-  String _periodoSeleccionado = 'ultimo_mes'; // 'ultimo_mes', 'ultimos_3_meses', 'ultimo_año', 'personalizado'
 
   @override
   void initState() {
@@ -93,7 +90,7 @@ class _ReportesExpensasScreenState extends State<ReportesExpensasScreen> with Si
         final estadisticas = _calcularEstadisticas(casas);
 
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 100),
           children: [
             _buildEstadisticasGenerales(estadisticas),
             const SizedBox(height: 24),
@@ -119,10 +116,8 @@ class _ReportesExpensasScreenState extends State<ReportesExpensasScreen> with Si
 
   Widget _buildHistoricoTab() {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 100),
       children: [
-        _buildSelectorPeriodo(),
-        const SizedBox(height: 24),
         _buildGraficoHistorico(),
         const SizedBox(height: 24),
         _buildTendencias(),
@@ -421,12 +416,16 @@ class _ReportesExpensasScreenState extends State<ReportesExpensasScreen> with Si
                   size: 24,
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  'Casas con Expensas Pendientes',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                Expanded(
+                  child: Text(
+                    'Casas con Expensas Pendientes',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                 ),
               ],
@@ -440,42 +439,16 @@ class _ReportesExpensasScreenState extends State<ReportesExpensasScreen> with Si
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.home_rounded,
-                    color: Colors.orange,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          casa.nombre,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        Text(
-                          'Propietario: ${casa.propietario}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxWidth < 340;
+                  final badge = Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.orange,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(
+                    child: const Text(
                       'PENDIENTE',
                       style: TextStyle(
                         color: Colors.white,
@@ -483,8 +456,50 @@ class _ReportesExpensasScreenState extends State<ReportesExpensasScreen> with Si
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
-                ],
+                  );
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.home_rounded,
+                        color: Colors.orange,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _nombreCasa(casa),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            Text(
+                              'Propietario: ${casa.propietario}',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                            ),
+                            if (compact) ...[
+                              const SizedBox(height: 6),
+                              badge,
+                            ],
+                          ],
+                        ),
+                      ),
+                      if (!compact) badge,
+                    ],
+                  );
+                },
               ),
             )),
           ],
@@ -494,6 +509,14 @@ class _ReportesExpensasScreenState extends State<ReportesExpensasScreen> with Si
   }
 
   Widget _buildResumenMensual(List<CasaModel> casas) {
+    final now = DateTime.now();
+    final mesActual = '${_nombreMesCompleto(now.month)} ${now.year}';
+    final pagadasAlDia = casas.where((c) => c.expensasPagadas).length;
+    final pendientes = casas.where((c) => !c.expensasPagadas).length;
+    final montoRecaudado = casas
+        .where((c) => c.expensasPagadas)
+        .fold<double>(0.0, (total, casa) => total + casa.montoExpensas);
+    
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -520,17 +543,121 @@ class _ReportesExpensasScreenState extends State<ReportesExpensasScreen> with Si
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             Text(
-              'Próximamente: Gráficos de tendencias mensuales',
+              mesActual,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildResumenItem(
+                    'Pagadas al día',
+                    pagadasAlDia.toString(),
+                    Icons.check_circle_rounded,
+                    Colors.green,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildResumenItem(
+                    'Pendientes',
+                    pendientes.toString(),
+                    Icons.pending_rounded,
+                    Colors.orange,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.attach_money_rounded, 
+                       color: Theme.of(context).colorScheme.primary, size: 24),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Recaudado este mes',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                      Text(
+                        '\$${montoRecaudado.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],
         ),
       ),
     );
+  }
+  
+  Widget _buildResumenItem(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  String _nombreMesCompleto(int mes) {
+    const nombres = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    return nombres[mes];
   }
 
   Widget _buildFiltros() {
@@ -583,7 +710,7 @@ class _ReportesExpensasScreenState extends State<ReportesExpensasScreen> with Si
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 100),
           itemCount: casasFiltradas.length,
           itemBuilder: (context, index) {
             return _buildCasaCard(casasFiltradas[index]);
@@ -616,56 +743,10 @@ class _ReportesExpensasScreenState extends State<ReportesExpensasScreen> with Si
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.home_rounded,
-                color: color,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    casa.nombre,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Propietario: ${casa.propietario}',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      fontSize: 14,
-                    ),
-                  ),
-                  if (casa.residentes.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Residentes: ${casa.residentes.length}',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Container(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 360;
+            final badge = Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.1),
@@ -680,205 +761,337 @@ class _ReportesExpensasScreenState extends State<ReportesExpensasScreen> with Si
                   fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+            );
 
-  Widget _buildSelectorPeriodo() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.date_range,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Seleccionar Período',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.home_rounded,
+                    color: color,
+                    size: 24,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            
-            // Botones de período predefinido
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _buildPeriodoChip('Último Mes', 'ultimo_mes'),
-                _buildPeriodoChip('Últimos 3 Meses', 'ultimos_3_meses'),
-                _buildPeriodoChip('Último Año', 'ultimo_año'),
-                _buildPeriodoChip('Personalizado', 'personalizado'),
-              ],
-            ),
-            
-            if (_periodoSeleccionado == 'personalizado') ...[
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _seleccionarFecha(true),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey[300]!),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Desde',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${_fechaInicio.day}/${_fechaInicio.month}/${_fechaInicio.year}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _nombreCasa(casa),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _seleccionarFecha(false),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey[300]!),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Hasta',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${_fechaFin.day}/${_fechaFin.month}/${_fechaFin.year}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                      const SizedBox(height: 4),
+                      Text(
+                        'Propietario: ${casa.propietario}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          fontSize: 14,
                         ),
                       ),
-                    ),
+                      if (casa.residentes.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Residentes: ${casa.residentes.length}',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                      if (compact) ...[
+                        const SizedBox(height: 8),
+                        badge,
+                      ],
+                    ],
                   ),
-                ],
-              ),
-            ],
-            
-            const SizedBox(height: 16),
-            Text(
-              'Seleccionar Período',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Funcionalidad próximamente',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-            ),
-          ],
+                ),
+                if (!compact) badge,
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
   Widget _buildGraficoHistorico() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Histórico de Pagos',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: AdminFirestoreService.streamCasas(widget.condominioId),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        final casas = snapshot.data!.docs
+            .map((doc) => CasaModel.fromFirestore(doc.data(), doc.id))
+            .toList();
+        
+        // Calcular estadísticas mensuales basadas en fechas de pago
+        final now = DateTime.now();
+        final meses = <String, Map<String, int>>{};
+        
+        for (int i = 5; i >= 0; i--) {
+          final mes = DateTime(now.year, now.month - i, 1);
+          final mesKey = '${_nombreMes(mes.month)} ${mes.year}';
+          meses[mesKey] = {'pagadas': 0, 'pendientes': 0};
+        }
+        
+        for (final casa in casas) {
+          if (casa.expensasPagadas && casa.fechaPago != null) {
+            final mesKey = '${_nombreMes(casa.fechaPago!.month)} ${casa.fechaPago!.year}';
+            if (meses.containsKey(mesKey)) {
+              meses[mesKey]!['pagadas'] = (meses[mesKey]!['pagadas'] ?? 0) + 1;
+            }
+          }
+        }
+        
+        // Calcular pendientes por mes
+        final totalCasas = casas.length;
+        for (final key in meses.keys) {
+          meses[key]!['pendientes'] = totalCasas - (meses[key]!['pagadas'] ?? 0);
+        }
+        
+        return Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.bar_chart_rounded, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Histórico de Pagos (6 meses)',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                ...meses.entries.map((entry) => _buildBarraHistorico(
+                  entry.key,
+                  entry.value['pagadas'] ?? 0,
+                  entry.value['pendientes'] ?? 0,
+                  totalCasas,
+                )),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Gráfico de tendencias próximamente',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        );
+      },
+    );
+  }
+  
+  String _nombreMes(int mes) {
+    const nombres = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return nombres[mes];
+  }
+  
+  Widget _buildBarraHistorico(String mes, int pagadas, int pendientes, int total) {
+    final porcentaje = total > 0 ? pagadas / total : 0.0;
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  mes,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                ),
               ),
+              const SizedBox(width: 8),
+              Text(
+                '$pagadas/$total pagadas',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: porcentaje,
+              backgroundColor: Colors.red.withValues(alpha: 0.2),
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+              minHeight: 8,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildTendencias() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Análisis de Tendencias',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: AdminFirestoreService.streamCasas(widget.condominioId),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox.shrink();
+        }
+        
+        final casas = snapshot.data!.docs
+            .map((doc) => CasaModel.fromFirestore(doc.data(), doc.id))
+            .toList();
+        
+        final totalCasas = casas.length;
+        final pagadas = casas.where((c) => c.expensasPagadas).length;
+        final pendientes = totalCasas - pagadas;
+        final porcentajePago = totalCasas > 0 ? (pagadas / totalCasas * 100) : 0.0;
+        
+        // Calcular tendencia (simulada basada en datos actuales)
+        String tendencia;
+        IconData tendenciaIcon;
+        Color tendenciaColor;
+        
+        if (porcentajePago >= 80) {
+          tendencia = 'Excelente tasa de pago';
+          tendenciaIcon = Icons.trending_up_rounded;
+          tendenciaColor = Colors.green;
+        } else if (porcentajePago >= 50) {
+          tendencia = 'Tasa de pago moderada';
+          tendenciaIcon = Icons.trending_flat_rounded;
+          tendenciaColor = Colors.orange;
+        } else {
+          tendencia = 'Requiere atención';
+          tendenciaIcon = Icons.trending_down_rounded;
+          tendenciaColor = Colors.red;
+        }
+        
+        return Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.insights_rounded, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Análisis de Tendencias',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                
+                // Indicador de tendencia
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: tendenciaColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: tendenciaColor.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(tendenciaIcon, color: tendenciaColor, size: 32),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              tendencia,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: tendenciaColor,
+                              ),
+                            ),
+                            Text(
+                              '${porcentajePago.toStringAsFixed(1)}% de expensas pagadas',
+                              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // Resumen rápido
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildMiniStat('Pagadas', pagadas, Colors.green),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildMiniStat('Pendientes', pendientes, Colors.red),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildMiniStat('Total', totalCasas, Colors.blue),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Análisis predictivo próximamente',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
+          ),
+        );
+      },
+    );
+  }
+  
+  Widget _buildMiniStat(String label, int value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value.toString(),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
-          ],
-        ),
+          ),
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+          ),
+        ],
       ),
     );
   }
@@ -923,7 +1136,9 @@ class _ReportesExpensasScreenState extends State<ReportesExpensasScreen> with Si
     final pagadas = casas.where((casa) => casa.expensasPagadas).length;
     final pendientes = totalCasas - pagadas;
     final porcentajePago = totalCasas > 0 ? ((pagadas / totalCasas) * 100).round() : 0;
-    final totalRecaudado = pagadas * 150000.0; // Valor ejemplo de expensa
+    final totalRecaudado = casas
+        .where((casa) => casa.expensasPagadas)
+        .fold<double>(0.0, (total, casa) => total + casa.montoExpensas);
 
     return {
       'totalCasas': totalCasas,
@@ -932,6 +1147,25 @@ class _ReportesExpensasScreenState extends State<ReportesExpensasScreen> with Si
       'porcentajePago': porcentajePago,
       'totalRecaudado': totalRecaudado,
     };
+  }
+
+  String _nombreCasa(CasaModel casa) {
+    final nombre = casa.nombre.trim();
+    if (nombre.isNotEmpty) {
+      final lower = nombre.toLowerCase();
+      if (lower.startsWith('casa ')) return nombre;
+      if (RegExp(r'^\d+').hasMatch(nombre)) {
+        return 'Casa $nombre';
+      }
+      return nombre;
+    }
+
+    final id = casa.id.trim();
+    if (RegExp(r'^\d+').hasMatch(id)) {
+      return 'Casa $id';
+    }
+
+    return id.isNotEmpty ? id : 'Casa sin número';
   }
 
   void _mostrarDialogoPermisos() {
@@ -1207,59 +1441,4 @@ class _ReportesExpensasScreenState extends State<ReportesExpensasScreen> with Si
     );
   }
 
-  Widget _buildPeriodoChip(String label, String value) {
-    final isSelected = _periodoSeleccionado == value;
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() {
-          _periodoSeleccionado = value;
-          _actualizarFechasPorPeriodo();
-        });
-      },
-      selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-      checkmarkColor: Theme.of(context).colorScheme.primary,
-    );
-  }
-
-  void _actualizarFechasPorPeriodo() {
-    final now = DateTime.now();
-    switch (_periodoSeleccionado) {
-      case 'ultimo_mes':
-        _fechaInicio = DateTime(now.year, now.month - 1, now.day);
-        _fechaFin = now;
-        break;
-      case 'ultimos_3_meses':
-        _fechaInicio = DateTime(now.year, now.month - 3, now.day);
-        _fechaFin = now;
-        break;
-      case 'ultimo_año':
-        _fechaInicio = DateTime(now.year - 1, now.month, now.day);
-        _fechaFin = now;
-        break;
-      case 'personalizado':
-        // Las fechas se mantienen como están
-        break;
-    }
-  }
-
-  Future<void> _seleccionarFecha(bool esInicio) async {
-    final fecha = await showDatePicker(
-      context: context,
-      initialDate: esInicio ? _fechaInicio : _fechaFin,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-    );
-    
-    if (fecha != null) {
-      setState(() {
-        if (esInicio) {
-          _fechaInicio = fecha;
-        } else {
-          _fechaFin = fecha;
-        }
-      });
-    }
-  }
 }

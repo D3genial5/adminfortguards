@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:developer' as dev;
 import '../models/notificacion_model.dart';
 import 'firebase_service.dart';
@@ -6,14 +8,38 @@ import 'firebase_service.dart';
 class NotificacionService {
   static FirebaseFirestore? get _firestore => FirebaseService.firestore;
   static const String _collection = 'notificaciones';
+  static const String _collectionPropietarios = 'notificaciones'; // Colección compartida
+  
+  static final FlutterLocalNotificationsPlugin _localNotifications = 
+      FlutterLocalNotificationsPlugin();
   
   // Inicializar servicio de notificaciones
   static Future<void> inicializar() async {
     try {
-      // Funcionalidad de notificaciones deshabilitada temporalmente
-      dev.log('Servicio de notificaciones deshabilitado');
+      // Configurar notificaciones locales
+      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const iosSettings = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+      const initSettings = InitializationSettings(
+        android: androidSettings,
+        iOS: iosSettings,
+      );
+      
+      await _localNotifications.initialize(initSettings);
+      
+      // Solicitar permisos FCM
+      await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      
+      dev.log('Servicio de notificaciones inicializado correctamente');
     } catch (e) {
-      throw Exception('Error al inicializar notificaciones: $e');
+      dev.log('Error al inicializar notificaciones: $e');
     }
   }
   
@@ -234,9 +260,74 @@ class NotificacionService {
       );
 
       await crear(notificacionEnviada);
-      dev.log('Notificación inmediata creada: ${notificacion.titulo}');
+      
+      // Guardar para propietarios (formato compatible)
+      await _guardarNotificacionParaPropietarios(notificacionEnviada);
+      
+      // Mostrar notificación local
+      await _mostrarNotificacionLocal(notificacionEnviada);
+      
+      dev.log('Notificación inmediata enviada: ${notificacion.titulo}');
     } catch (e) {
       throw Exception('Error al enviar notificación inmediata: $e');
+    }
+  }
+  
+  // Guardar notificación en formato para propietarios
+  static Future<void> _guardarNotificacionParaPropietarios(NotificacionModel notificacion) async {
+    if (_firestore == null) return;
+    
+    try {
+      // Formato simple compatible con app propietarios
+      final dataPropietario = {
+        'condominio': notificacion.condominioId,
+        'casaNumero': 0, // 0 = todo el condominio
+        'titulo': notificacion.titulo,
+        'mensaje': notificacion.mensaje,
+        'fecha': notificacion.fechaCreacion,
+        'visto': false,
+        'tipo': 'condominio',
+        'prioridad': notificacion.prioridad.name,
+      };
+      
+      await _firestore!.collection(_collectionPropietarios).add(dataPropietario);
+      dev.log('Notificación guardada para propietarios');
+    } catch (e) {
+      dev.log('Error guardando para propietarios: $e');
+    }
+  }
+  
+  // Mostrar notificación local
+  static Future<void> _mostrarNotificacionLocal(NotificacionModel notificacion) async {
+    try {
+      const androidDetails = AndroidNotificationDetails(
+        'admin_channel',
+        'Notificaciones Admin',
+        channelDescription: 'Notificaciones del administrador',
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+      );
+      
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+      
+      const details = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+      
+      await _localNotifications.show(
+        DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        notificacion.titulo,
+        notificacion.mensaje,
+        details,
+      );
+    } catch (e) {
+      dev.log('Error mostrando notificación local: $e');
     }
   }
 

@@ -13,6 +13,7 @@ class RegistroIngresoService {
     required Map<String, dynamic> datosQR,
   }) async {
     try {
+      final sessionId = datosQR['sessionId'] as String?;
       final registro = RegistroIngresoModel(
         id: '',
         guardiaId: guardiaId,
@@ -23,6 +24,7 @@ class RegistroIngresoService {
         casa: datosQR['casa']?.toString(),
         visitanteCI: datosQR['ci'],
         motivoVisita: datosQR['motivo'],
+        sessionId: sessionId,
         fechaIngreso: DateTime.now(),
         estado: 'ingresado',
       );

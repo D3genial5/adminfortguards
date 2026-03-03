@@ -21,70 +21,167 @@ class _GuardiasDashboardScreenState extends State<GuardiasDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('Gestión de Guardias'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_rounded),
-            onPressed: () => _mostrarFormularioGuardia(),
-            tooltip: 'Agregar Guardia',
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF6EEE3),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 120,
+            floating: false,
+            pinned: true,
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            foregroundColor: Colors.white,
+            flexibleSpace: FlexibleSpaceBar(
+              centerTitle: true,
+              title: const Text(
+                'Gestión de Guardias',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            actions: [
+              Container(
+                margin: const EdgeInsets.only(right: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.person_add_rounded, color: Theme.of(context).colorScheme.primary),
+                  onPressed: () => _mostrarFormularioGuardia(),
+                  tooltip: 'Agregar Guardia',
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          _buildFiltros(),
-          _buildEstadisticas(),
-          Expanded(child: _buildListaGuardias()),
+          SliverToBoxAdapter(child: _buildFiltros()),
+          SliverToBoxAdapter(child: _buildEstadisticas()),
+          SliverFillRemaining(child: _buildListaGuardias()),
         ],
       ),
     );
   }
 
   Widget _buildFiltros() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-          ),
-        ),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         children: [
           Expanded(
-            child: SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'todos', label: Text('Todos')),
-                ButtonSegment(value: 'diurno', label: Text('Diurnos')),
-                ButtonSegment(value: 'nocturno', label: Text('Nocturnos')),
-              ],
-              selected: {_filtroTurno},
-              onSelectionChanged: (Set<String> selection) {
-                setState(() {
-                  _filtroTurno = selection.first;
-                });
-              },
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildFilterChip('Todos', 'todos', Icons.group_rounded),
+                  const SizedBox(width: 10),
+                  _buildFilterChip('Diurnos', 'diurno', Icons.wb_sunny_rounded),
+                  const SizedBox(width: 10),
+                  _buildFilterChip('Nocturnos', 'nocturno', Icons.nightlight_rounded),
+                ],
+              ),
             ),
           ),
-          const SizedBox(width: 16),
-          FilterChip(
-            label: const Text('Solo Activos'),
-            selected: _soloActivos,
-            onSelected: (selected) {
-              setState(() {
-                _soloActivos = selected;
-              });
-            },
+          const SizedBox(width: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: _soloActivos 
+                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
+                  : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.1)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: Icon(
+                _soloActivos ? Icons.visibility : Icons.visibility_off,
+                color: _soloActivos 
+                    ? Theme.of(context).colorScheme.primary
+                    : (isDark ? Colors.white54 : Colors.grey),
+                size: 22,
+              ),
+              onPressed: () => setState(() => _soloActivos = !_soloActivos),
+              tooltip: _soloActivos ? 'Mostrando activos' : 'Mostrando todos',
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, String value, IconData icon) {
+    final isSelected = _filtroTurno == value;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return GestureDetector(
+      onTap: () => setState(() => _filtroTurno = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? Theme.of(context).colorScheme.primary
+              : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white),
+          borderRadius: BorderRadius.circular(25),
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ] : [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected 
+                  ? Colors.white 
+                  : (isDark ? Colors.white70 : Colors.grey.shade600),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected 
+                    ? Colors.white 
+                    : (isDark ? Colors.white70 : Colors.grey.shade700),
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -117,35 +214,54 @@ class _GuardiasDashboardScreenState extends State<GuardiasDashboardScreen> {
   }
 
   Widget _buildStatCard(String label, int value, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(12),
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           children: [
-            Icon(
-              icon,
-              color: Theme.of(context).colorScheme.primary,
-              size: 24,
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: Theme.of(context).colorScheme.primary,
+                size: 22,
+              ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
             Text(
               value.toString(),
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
+                color: isDark ? Colors.white : Colors.black87,
               ),
             ),
+            const SizedBox(height: 2),
             Text(
               label,
               style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: isDark ? Colors.white60 : Colors.grey.shade600,
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -201,118 +317,173 @@ class _GuardiasDashboardScreenState extends State<GuardiasDashboardScreen> {
   }
 
   Widget _buildGuardiaCard(GuardiaModel guardia) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final turnoColor = guardia.esDiurno ? Colors.orange : Colors.indigo;
+    
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-          width: 1,
-        ),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        leading: Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: guardia.activo
-                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
-                : Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
-            guardia.esDiurno ? Icons.wb_sunny_rounded : Icons.nightlight_rounded,
-            color: guardia.activo
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.outline,
-            size: 24,
-          ),
-        ),
-        title: Text(
-          guardia.nombre,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
           children: [
-            const SizedBox(height: 4),
-            Text(
-              guardia.email,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                fontSize: 14,
+            // Avatar con gradiente
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: guardia.activo
+                      ? [turnoColor.withValues(alpha: 0.8), turnoColor]
+                      : [Colors.grey.shade400, Colors.grey.shade500],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: (guardia.activo ? turnoColor : Colors.grey).withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Icon(
+                guardia.esDiurno ? Icons.wb_sunny_rounded : Icons.nightlight_rounded,
+                color: Colors.white,
+                size: 26,
               ),
             ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: guardia.esDiurno
-                        ? Colors.orange.withValues(alpha: 0.1)
-                        : Colors.indigo.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    guardia.turnoDisplay,
+            const SizedBox(width: 16),
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${guardia.nombre} ${guardia.apellido}',
                     style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: guardia.esDiurno ? Colors.orange : Colors.indigo,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: isDark ? Colors.white : Colors.black87,
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: guardia.activo
-                        ? Colors.green.withValues(alpha: 0.1)
-                        : Colors.red.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.email_outlined,
+                        size: 14,
+                        color: isDark ? Colors.white54 : Colors.grey.shade500,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          guardia.email,
+                          style: TextStyle(
+                            color: isDark ? Colors.white60 : Colors.grey.shade600,
+                            fontSize: 13,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
-                  child: Text(
-                    guardia.activo ? 'Activo' : 'Inactivo',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: guardia.activo ? Colors.green : Colors.red,
-                    ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      _buildBadge(
+                        guardia.turnoDisplay,
+                        turnoColor,
+                        guardia.esDiurno ? Icons.wb_sunny_rounded : Icons.nightlight_rounded,
+                      ),
+                      _buildBadge(
+                        guardia.activo ? 'Activo' : 'Inactivo',
+                        guardia.activo ? Colors.green : Colors.red,
+                        guardia.activo ? Icons.check_circle : Icons.cancel,
+                      ),
+                    ],
                   ),
+                ],
+              ),
+            ),
+            // Menu
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: PopupMenuButton<String>(
+                icon: Icon(
+                  Icons.more_vert_rounded,
+                  color: isDark ? Colors.white60 : Colors.grey.shade600,
                 ),
-              ],
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                onSelected: (value) => _manejarAccionGuardia(value, guardia),
+                itemBuilder: (_) => [
+                  _buildPopupItem('editar', Icons.edit_rounded, 'Editar', Colors.blue),
+                  _buildPopupItem(
+                    guardia.activo ? 'desactivar' : 'activar',
+                    guardia.activo ? Icons.pause_circle_rounded : Icons.play_circle_rounded,
+                    guardia.activo ? 'Desactivar' : 'Activar',
+                    guardia.activo ? Colors.orange : Colors.green,
+                  ),
+                  _buildPopupItem('eliminar', Icons.delete_rounded, 'Eliminar', Colors.red),
+                ],
+              ),
             ),
           ],
         ),
-        trailing: PopupMenuButton<String>(
-          icon: Icon(
-            Icons.more_vert,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+      ),
+    );
+  }
+
+  Widget _buildBadge(String text, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
           ),
-          onSelected: (value) => _manejarAccionGuardia(value, guardia),
-          itemBuilder: (_) => [
-            const PopupMenuItem(value: 'editar', child: Text('Editar')),
-            PopupMenuItem(
-              value: guardia.activo ? 'desactivar' : 'activar',
-              child: Text(guardia.activo ? 'Desactivar' : 'Activar'),
-            ),
-            const PopupMenuItem(value: 'eliminar', child: Text('Eliminar')),
-          ],
-        ),
+        ],
+      ),
+    );
+  }
+
+  PopupMenuItem<String> _buildPopupItem(String value, IconData icon, String text, Color color) {
+    return PopupMenuItem(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 10),
+          Text(text, style: TextStyle(color: color)),
+        ],
       ),
     );
   }

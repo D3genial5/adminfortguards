@@ -48,8 +48,10 @@ class _ExpensasScreenState extends State<ExpensasScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF121212) : colorScheme.surface,
       appBar: AppBar(
         title: const Text('Actualizar Expensa'),
         backgroundColor: colorScheme.primary,
@@ -83,7 +85,7 @@ class _ExpensasScreenState extends State<ExpensasScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurfaceVariant,
+                        color: isDark ? Colors.white : colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -91,19 +93,30 @@ class _ExpensasScreenState extends State<ExpensasScreen> {
               ),
               const SizedBox(height: 24),
               
-              Card(
-                elevation: 2,
+              Container(
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SwitchListTile(
-                        title: const Text(
+                        title: Text(
                           'Marcar como pagada',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
+                            color: isDark ? Colors.white : Colors.black87,
                           ),
                         ),
                         subtitle: Text(
@@ -123,19 +136,49 @@ class _ExpensasScreenState extends State<ExpensasScreen> {
                       ),
                       
                       if (_pagada) ...[
-                        const Divider(height: 32),
+                        Divider(height: 32, color: isDark ? Colors.white24 : Colors.grey.shade300),
                         TextFormField(
                           controller: _montoController,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                            fontSize: 16,
+                          ),
                           decoration: InputDecoration(
                             labelText: 'Monto pagado',
+                            labelStyle: TextStyle(
+                              color: isDark ? Colors.white70 : Colors.grey.shade600,
+                            ),
                             prefixText: '\$ ',
+                            prefixStyle: TextStyle(
+                              color: isDark ? Colors.white : Colors.black87,
+                              fontSize: 16,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: isDark ? Colors.white24 : Colors.grey.shade300,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: isDark ? Colors.white24 : Colors.grey.shade300,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.primary,
+                                width: 2,
+                              ),
                             ),
                             filled: true,
-                            fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                            prefixIcon: const Icon(Icons.attach_money),
+                            fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
+                            prefixIcon: Icon(
+                              Icons.attach_money,
+                              color: isDark ? Colors.white70 : Colors.grey.shade600,
+                            ),
                           ),
                           validator: (value) {
                             if (_pagada && (value == null || value.isEmpty)) {
@@ -156,20 +199,23 @@ class _ExpensasScreenState extends State<ExpensasScreen> {
                 ),
               ),
               
-              const Spacer(),
-              
-              FilledButton.icon(
-                onPressed: _guardar,
-                icon: const Icon(Icons.save),
-                label: const Text('Guardar Cambios'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
             ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: FilledButton.icon(
+            onPressed: _guardar,
+            icon: const Icon(Icons.save),
+            label: const Text('Guardar Cambios'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
           ),
         ),
       ),

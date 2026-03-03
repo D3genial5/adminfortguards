@@ -400,23 +400,56 @@ class _GestionQrPagoScreenState extends State<GestionQrPagoScreen> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              OutlinedButton.icon(
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final compact = constraints.maxWidth < 360;
+
+                              final botonEliminar = OutlinedButton.icon(
                                 onPressed: _eliminarQr,
                                 icon: const Icon(Icons.delete_outline),
-                                label: const Text('Eliminar'),
+                                label: const Text(
+                                  'Eliminar',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: colorScheme.error,
+                                  side: BorderSide(color: colorScheme.error.withValues(alpha: 0.5)),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
                                 ),
-                              ),
-                              FilledButton.icon(
+                              );
+
+                              final botonCambiar = FilledButton.tonalIcon(
                                 onPressed: _mostrarOpcionesImagen,
-                                icon: const Icon(Icons.upload),
-                                label: const Text('Cambiar QR'),
-                              ),
-                            ],
+                                icon: const Icon(Icons.edit_rounded),
+                                label: const Text(
+                                  'Cambiar QR',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              );
+
+                              if (compact) {
+                                return Column(
+                                  children: [
+                                    SizedBox(width: double.infinity, child: botonEliminar),
+                                    const SizedBox(height: 10),
+                                    SizedBox(width: double.infinity, child: botonCambiar),
+                                  ],
+                                );
+                              }
+
+                              return Row(
+                                children: [
+                                  Expanded(child: botonEliminar),
+                                  const SizedBox(width: 12),
+                                  Expanded(child: botonCambiar),
+                                ],
+                              );
+                            },
                           ),
                         ],
                       ),

@@ -80,9 +80,11 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
   Widget build(BuildContext context) {
     final colorPrimario = Theme.of(context).colorScheme.primary;
     
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     if (_cargando) {
       return Scaffold(
-        backgroundColor: const Color(0xFFFAFBFC),
+        backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF6EEE3),
         appBar: AppBar(
           title: const Text(
             'Configuración',
@@ -107,7 +109,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFBFC),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF6EEE3),
       appBar: AppBar(
         title: const Text(
           'Configuración',
@@ -160,14 +162,16 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
   Widget _buildPerfilUsuario() {
     final colorPrimario = Theme.of(context).colorScheme.primary;
     
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -200,10 +204,10 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
               children: [
                 Text(
                   _nombreUsuario,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF2D2D2D),
+                    color: isDark ? Colors.white : const Color(0xFF2D2D2D),
                   ),
                 ),
               ],
@@ -376,11 +380,13 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
         // Items de la sección
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).brightness == Brightness.dark 
+                ? Colors.white.withValues(alpha: 0.08) 
+                : Colors.white,
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.05),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -402,6 +408,9 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
     required ValueChanged<bool> onChanged,
   }) {
     final colorPrimario = Theme.of(context).colorScheme.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const colorInactivoTrack = Color(0xFFD9D2C8);
+    const colorInactivoThumb = Color(0xFFF6EEE3);
     
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -410,12 +419,12 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F3F6),
+              color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFF6EEE3),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               icono,
-              color: const Color(0xFF6B7280),
+              color: isDark ? Colors.white70 : const Color(0xFF6B7280),
               size: 22,
             ),
           ),
@@ -426,18 +435,18 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
               children: [
                 Text(
                   titulo,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF2D2D2D),
+                    color: isDark ? Colors.white : const Color(0xFF2D2D2D),
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitulo,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    color: Color(0xFF6B7280),
+                    color: isDark ? Colors.white60 : const Color(0xFF6B7280),
                   ),
                 ),
               ],
@@ -447,6 +456,9 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
             value: valor,
             onChanged: onChanged,
             activeColor: colorPrimario,
+            activeTrackColor: colorPrimario,
+            inactiveTrackColor: colorInactivoTrack,
+            inactiveThumbColor: colorInactivoThumb,
           ),
         ],
       ),
@@ -459,6 +471,8 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
     required String subtitulo,
     required VoidCallback onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -471,12 +485,12 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F3F6),
+                  color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFF6EEE3),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   icono,
-                  color: const Color(0xFF6B7280),
+                  color: isDark ? Colors.white70 : const Color(0xFF6B7280),
                   size: 22,
                 ),
               ),
@@ -487,26 +501,26 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                   children: [
                     Text(
                       titulo,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF2D2D2D),
+                        color: isDark ? Colors.white : const Color(0xFF2D2D2D),
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitulo,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: Color(0xFF6B7280),
+                        color: isDark ? Colors.white60 : const Color(0xFF6B7280),
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: Color(0xFF9CA3AF),
+                color: isDark ? Colors.white38 : const Color(0xFF9CA3AF),
                 size: 24,
               ),
             ],
@@ -517,12 +531,14 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
   }
 
   Widget _buildDivider() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Divider(
         height: 1,
         thickness: 1,
-        color: Color(0xFFF1F3F6),
+        color: isDark ? Colors.white12 : const Color(0xFFF6EEE3),
       ),
     );
   }

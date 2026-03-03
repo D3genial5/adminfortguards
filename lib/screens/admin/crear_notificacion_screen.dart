@@ -69,6 +69,8 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final safeBottom = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
@@ -77,25 +79,27 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
         elevation: 0,
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _buildSeccionContenido(),
-            const SizedBox(height: 24),
-            _buildSeccionPrioridad(),
-            const SizedBox(height: 24),
-            _buildSeccionDestinatarios(),
-            const SizedBox(height: 24),
-            _buildSeccionProgramacion(),
-            if (_repeticion != TipoRepeticion.ninguna) ...[
+      body: SafeArea(
+        top: false,
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 20 + safeBottom),
+            children: [
+              _buildSeccionContenido(),
               const SizedBox(height: 24),
-              _buildSeccionRepeticion(),
+              _buildSeccionPrioridad(),
+              const SizedBox(height: 24),
+              // Sección destinatarios eliminada según requerimiento
+              _buildSeccionProgramacion(),
+              if (_repeticion != TipoRepeticion.ninguna) ...[
+                const SizedBox(height: 24),
+                _buildSeccionRepeticion(),
+              ],
+              const SizedBox(height: 32),
+              _buildBotones(),
             ],
-            const SizedBox(height: 32),
-            _buildBotones(),
-          ],
+          ),
         ),
       ),
     );
@@ -183,7 +187,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
     );
   }
 
-  // Color turquesa para acentos
+  // Color primario del tema (brandbook)
   Color get _primaryColor => Theme.of(context).colorScheme.primary;
   
   Widget _buildSeccionPrioridad() {
@@ -219,26 +223,32 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
               runSpacing: 8,
               children: PrioridadNotificacion.values.map((prioridad) {
                 final isSelected = _prioridad == prioridad;
-                Color bgColor;
-                Color textColor;
+                Color accentColor;
+                Color onAccent;
                 switch (prioridad) {
                   case PrioridadNotificacion.baja:
-                    bgColor = const Color(0xFF444444);
-                    textColor = Colors.white;
+                    accentColor = const Color(0xFF4B5563);
+                    onAccent = Colors.white;
                     break;
                   case PrioridadNotificacion.media:
-                    bgColor = const Color(0xFF3A8DFF);
-                    textColor = Colors.white;
+                    accentColor = const Color(0xFFFF4200);
+                    onAccent = Colors.white;
                     break;
                   case PrioridadNotificacion.alta:
-                    bgColor = const Color(0xFFFFC107);
-                    textColor = Colors.black;
+                    accentColor = const Color(0xFFFFA000);
+                    onAccent = Colors.black;
                     break;
                   case PrioridadNotificacion.urgente:
-                    bgColor = const Color(0xFFFF4E4E);
-                    textColor = Colors.white;
+                    accentColor = const Color(0xFFE53935);
+                    onAccent = Colors.white;
                     break;
                 }
+
+                final bgColor = isSelected ? accentColor : const Color(0xFFF6EEE3);
+                final textColor = isSelected ? onAccent : const Color(0xFF2D2D2D);
+                final borderColor = isSelected
+                    ? accentColor.withValues(alpha: 0.35)
+                    : const Color(0xFFE0D8CE);
 
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
@@ -254,14 +264,12 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
                       decoration: BoxDecoration(
                         color: bgColor,
                         borderRadius: BorderRadius.circular(20),
-                        border: isSelected 
-                            ? Border.all(color: _primaryColor.withValues(alpha: 0.6), width: 2)
-                            : null,
+                        border: Border.all(color: borderColor, width: isSelected ? 1.8 : 1),
                         boxShadow: isSelected ? [
                           BoxShadow(
-                            color: _primaryColor.withValues(alpha: 0.4),
-                            blurRadius: 8,
-                            spreadRadius: 1,
+                            color: accentColor.withValues(alpha: 0.22),
+                            blurRadius: 6,
+                            spreadRadius: 0,
                           ),
                         ] : null,
                       ),
@@ -286,94 +294,6 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
                   ),
                 );
               }).toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSeccionDestinatarios() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.people_rounded,
-                  color: _primaryColor,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Destinatarios',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            CheckboxListTile(
-              title: Text('Todos los usuarios', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-              subtitle: Text('Propietarios y residentes', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-              value: _destinatarios.contains('todos'),
-              activeColor: _primaryColor,
-              checkColor: Colors.white,
-              side: BorderSide(color: _primaryColor, width: 2),
-              onChanged: (value) {
-                setState(() {
-                  if (value == true) {
-                    _destinatarios = ['todos'];
-                  } else {
-                    _destinatarios.remove('todos');
-                  }
-                });
-              },
-              contentPadding: EdgeInsets.zero,
-            ),
-            CheckboxListTile(
-              title: Text('Solo propietarios', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-              subtitle: Text('Únicamente los dueños de las casas', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-              value: _destinatarios.contains('propietarios'),
-              activeColor: _primaryColor,
-              checkColor: Colors.white,
-              side: BorderSide(color: _destinatarios.contains('todos') ? Colors.grey : _primaryColor, width: 2),
-              onChanged: _destinatarios.contains('todos') ? null : (value) {
-                setState(() {
-                  if (value == true) {
-                    _destinatarios.add('propietarios');
-                  } else {
-                    _destinatarios.remove('propietarios');
-                  }
-                });
-              },
-              contentPadding: EdgeInsets.zero,
-            ),
-            CheckboxListTile(
-              title: Text('Solo residentes', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-              subtitle: Text('Únicamente los habitantes de las casas', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-              value: _destinatarios.contains('residentes'),
-              activeColor: _primaryColor,
-              checkColor: Colors.white,
-              side: BorderSide(color: _destinatarios.contains('todos') ? Colors.grey : _primaryColor, width: 2),
-              onChanged: _destinatarios.contains('todos') ? null : (value) {
-                setState(() {
-                  if (value == true) {
-                    _destinatarios.add('residentes');
-                  } else {
-                    _destinatarios.remove('residentes');
-                  }
-                });
-              },
-              contentPadding: EdgeInsets.zero,
             ),
           ],
         ),
@@ -409,68 +329,112 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            SwitchListTile(
-              title: Text('Programar envío', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-              subtitle: Text(
-                _esProgramada 
-                    ? 'Se enviará en la fecha y hora seleccionada'
-                    : 'Se enviará inmediatamente',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
-              value: _esProgramada,
-              activeColor: _primaryColor,
-              onChanged: (value) {
-                setState(() {
-                  _esProgramada = value;
-                  if (!value) {
-                    _fechaProgramada = null;
-                    _horaProgramada = null;
-                    _repeticion = TipoRepeticion.ninguna;
-                  }
-                });
-              },
-              contentPadding: EdgeInsets.zero,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Programar envío',
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _esProgramada
+                            ? 'Se enviará en la fecha y hora seleccionada'
+                            : 'Se enviará inmediatamente',
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Switch.adaptive(
+                  value: _esProgramada,
+                  thumbColor: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.selected)) return Colors.white;
+                    return const Color(0xFFF6EEE3);
+                  }),
+                  trackColor: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.selected)) return _primaryColor;
+                    return const Color(0xFFD9D2C8);
+                  }),
+                  trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+                  onChanged: (value) {
+                    setState(() {
+                      _esProgramada = value;
+                      if (!value) {
+                        _fechaProgramada = null;
+                        _horaProgramada = null;
+                        _repeticion = TipoRepeticion.ninguna;
+                      }
+                    });
+                  },
+                ),
+              ],
             ),
             if (_esProgramada) ...[
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _seleccionarFecha(),
-                      icon: const Icon(Icons.calendar_today_rounded),
-                      label: Text(
-                        _fechaProgramada != null
-                            ? '${_fechaProgramada!.day}/${_fechaProgramada!.month}/${_fechaProgramada!.year}'
-                            : 'Seleccionar fecha',
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final usarColumna = constraints.maxWidth < 430;
+
+                  final botonFecha = OutlinedButton.icon(
+                    onPressed: () => _seleccionarFecha(),
+                    icon: const Icon(Icons.calendar_today_rounded),
+                    label: Text(
+                      _fechaProgramada != null
+                          ? '${_fechaProgramada!.day}/${_fechaProgramada!.month}/${_fechaProgramada!.year}'
+                          : 'Seleccionar fecha',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _seleccionarHora(),
-                      icon: const Icon(Icons.access_time_rounded),
-                      label: Text(
-                        _horaProgramada != null
-                            ? '${_horaProgramada!.hour.toString().padLeft(2, '0')}:${_horaProgramada!.minute.toString().padLeft(2, '0')}'
-                            : 'Seleccionar hora',
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                  );
+
+                  final botonHora = OutlinedButton.icon(
+                    onPressed: () => _seleccionarHora(),
+                    icon: const Icon(Icons.access_time_rounded),
+                    label: Text(
+                      _horaProgramada != null
+                          ? '${_horaProgramada!.hour.toString().padLeft(2, '0')}:${_horaProgramada!.minute.toString().padLeft(2, '0')}'
+                          : 'Seleccionar hora',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                  ),
-                ],
+                  );
+
+                  if (usarColumna) {
+                    return Column(
+                      children: [
+                        SizedBox(width: double.infinity, child: botonFecha),
+                        const SizedBox(height: 10),
+                        SizedBox(width: double.infinity, child: botonHora),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      Expanded(child: botonFecha),
+                      const SizedBox(width: 16),
+                      Expanded(child: botonHora),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<TipoRepeticion>(
@@ -557,57 +521,78 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
   }
 
   Widget _buildBotones() {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: _guardando ? null : () => Navigator.pop(context),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              foregroundColor: Theme.of(context).colorScheme.primary,
-              side: BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.5),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-            child: const Text('Cancelar'),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          flex: 2,
-          child: ElevatedButton.icon(
-            onPressed: _guardando ? null : _guardarNotificacion,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: Colors.grey.shade300,
-              disabledForegroundColor: Colors.grey.shade500,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-            icon: _guardando
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : Icon(_esProgramada ? Icons.schedule_send_rounded : Icons.send_rounded),
-            label: Text(
-              _guardando
-                  ? 'Guardando...'
-                  : _esProgramada
-                      ? (_esEdicion ? 'Actualizar' : 'Programar')
-                      : (_esEdicion ? 'Actualizar' : 'Enviar Ahora'),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 380;
+
+        final botonCancelar = OutlinedButton(
+          onPressed: _guardando ? null : () => Navigator.pop(context),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            foregroundColor: Theme.of(context).colorScheme.primary,
+            side: BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.5),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
           ),
-        ),
-      ],
+          child: const Text(
+            'Cancelar',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        );
+
+        final botonPrincipal = ElevatedButton.icon(
+          onPressed: _guardando ? null : _guardarNotificacion,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: Colors.grey.shade300,
+            disabledForegroundColor: Colors.grey.shade500,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          icon: _guardando
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : Icon(_esProgramada ? Icons.schedule_send_rounded : Icons.send_rounded),
+          label: Text(
+            _guardando
+                ? 'Guardando...'
+                : _esProgramada
+                    ? (_esEdicion ? 'Actualizar' : 'Programar')
+                    : (_esEdicion ? 'Actualizar' : 'Enviar'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        );
+
+        if (compact) {
+          return Column(
+            children: [
+              SizedBox(width: double.infinity, child: botonCancelar),
+              const SizedBox(height: 10),
+              SizedBox(width: double.infinity, child: botonPrincipal),
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: botonCancelar),
+            const SizedBox(width: 12),
+            Expanded(child: botonPrincipal),
+          ],
+        );
+      },
     );
   }
 

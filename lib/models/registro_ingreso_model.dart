@@ -10,6 +10,7 @@ class RegistroIngresoModel {
   final String? casa;
   final String? visitanteCI;
   final String? motivoVisita;
+  final String? sessionId;
   final DateTime fechaIngreso;
   final DateTime? fechaSalida;
   final String estado;
@@ -24,6 +25,7 @@ class RegistroIngresoModel {
     this.casa,
     this.visitanteCI,
     this.motivoVisita,
+    this.sessionId,
     required this.fechaIngreso,
     this.fechaSalida,
     required this.estado,
@@ -41,6 +43,7 @@ class RegistroIngresoModel {
       casa: data['casa'],
       visitanteCI: data['visitanteCI'],
       motivoVisita: data['motivoVisita'],
+      sessionId: data['sessionId'],
       fechaIngreso: (data['fechaIngreso'] as Timestamp).toDate(),
       fechaSalida: data['fechaSalida'] != null 
           ? (data['fechaSalida'] as Timestamp).toDate() 
@@ -59,6 +62,7 @@ class RegistroIngresoModel {
       'casa': casa,
       'visitanteCI': visitanteCI,
       'motivoVisita': motivoVisita,
+      'sessionId': sessionId,
       'fechaIngreso': Timestamp.fromDate(fechaIngreso),
       'fechaSalida': fechaSalida != null ? Timestamp.fromDate(fechaSalida!) : null,
       'estado': estado,
