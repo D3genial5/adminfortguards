@@ -21,11 +21,11 @@ class TurnoModel {
   factory TurnoModel.fromFirestore(Map<String, dynamic> data, String id) {
     return TurnoModel(
       id: id,
-      guardiaId: data['guardiaId'] ?? '',
-      condominioId: data['condominioId'] ?? '',
+      guardiaId: (data['guardiaId'] as String?) ?? '',
+      condominioId: (data['condominioId'] as String?) ?? '',
       fechaInicio: data['fechaInicio']?.toDate() ?? DateTime.now(),
       fechaFin: data['fechaFin']?.toDate() ?? DateTime.now(),
-      estado: data['estado'] ?? 'activo',
+      estado: (data['estado'] as String?) ?? 'activo',
       reportes: (data['reportes'] as List<dynamic>?)
           ?.map((r) => ReporteAcceso.fromMap(r))
           .toList() ?? [],
@@ -97,14 +97,14 @@ class ReporteAcceso {
   // Convertir desde Map
   factory ReporteAcceso.fromMap(Map<String, dynamic> data) {
     return ReporteAcceso(
-      id: data['id'] ?? '',
-      turnoId: data['turnoId'] ?? '',
-      visitante: data['visitante'] ?? '',
-      casa: data['casa'] ?? '',
+      id: (data['id'] as String?) ?? '',
+      turnoId: (data['turnoId'] as String?) ?? '',
+      visitante: (data['visitante'] as String?) ?? '',
+      casa: (data['casa'] as String?) ?? '',
       horaEntrada: data['horaEntrada']?.toDate() ?? DateTime.now(),
-      motivo: data['motivo'] ?? '',
-      tipoVisita: data['tipoVisita'] ?? 'Visitante',
-      observaciones: data['observaciones'] ?? '',
+      motivo: (data['motivo'] as String?) ?? '',
+      tipoVisita: (data['tipoVisita'] as String?) ?? 'Visitante',
+      observaciones: (data['observaciones'] as String?) ?? '',
       fechaHora: data['fechaHora']?.toDate() ?? DateTime.now(),
     );
   }

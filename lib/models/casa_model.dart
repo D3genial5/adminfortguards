@@ -73,13 +73,13 @@ class CasaModel {
     
     return CasaModel(
       id: id,
-      nombre: data['nombre'] ?? '',
-      propietario: data['propietario'] ?? '',
+      nombre: (data['nombre'] as String?) ?? '',
+      propietario: (data['propietario'] as String?) ?? '',
       residentes: data['residentes'] != null 
           ? List<String>.from(data['residentes']) 
-          : [data['propietario'] ?? ''],
+          : [(data['propietario'] as String?) ?? ''],
       expensasPagadas: expensasPagadas,
-      montoExpensas: (data['montoPagado'] ?? data['montoExpensas'] ?? 0.0).toDouble(),
+      montoExpensas: (data['montoPagado'] ?? (data['montoExpensas'] as num?)?.toInt() ?? 0.0).toDouble(),
       fechaPago: data['fechaPago'] != null 
           ? (data['fechaPago'] as Timestamp).toDate() 
           : null,

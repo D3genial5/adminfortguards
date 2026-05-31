@@ -1,4 +1,4 @@
-import 'dart:developer' as dev;
+import '../core/app_log.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/access_info_model.dart';
 import '../models/access_log_model.dart';
@@ -55,7 +55,7 @@ class AccessService {
         if (accessInfo.tipoAcceso == 'usos' && usosActuales < 999999) {
           nuevosUsos = usosActuales - 1;
           transaction.update(casaRef, {'codigoUsos': nuevosUsos});
-          dev.log('✅ Usos decrementados: $usosActuales → $nuevosUsos', name: 'AccessService');
+          AppLog.log('✅ Usos decrementados: $usosActuales → $nuevosUsos', name: 'AccessService');
         }
 
         // 6. Crear log de acceso
@@ -76,7 +76,7 @@ class AccessService {
         final logRef = _firestore.collection('access_logs').doc();
         transaction.set(logRef, log.toFirestore());
 
-        dev.log('✅ Log de acceso creado', name: 'AccessService');
+        AppLog.log('✅ Log de acceso creado', name: 'AccessService');
 
         // 7. Crear notificación para propietario
         await _createNotification(
@@ -94,7 +94,7 @@ class AccessService {
         };
       });
     } catch (e) {
-      dev.log('❌ Error autorizando acceso: $e', name: 'AccessService');
+      AppLog.log('❌ Error autorizando acceso: $e', name: 'AccessService');
       return {
         'success': false,
         'message': 'Error: ${e.toString()}',
@@ -129,14 +129,14 @@ class AccessService {
 
       await _firestore.collection('access_logs').add(log.toFirestore());
 
-      dev.log('📝 Acceso denegado registrado', name: 'AccessService');
+      AppLog.log('📝 Acceso denegado registrado', name: 'AccessService');
 
       return {
         'success': true,
         'message': 'Acceso denegado registrado',
       };
     } catch (e) {
-      dev.log('❌ Error registrando denegación: $e', name: 'AccessService');
+      AppLog.log('❌ Error registrando denegación: $e', name: 'AccessService');
       return {
         'success': false,
         'message': 'Error: ${e.toString()}',
@@ -170,9 +170,9 @@ class AccessService {
         'visto': false,
       });
 
-      dev.log('🔔 Notificación enviada al propietario', name: 'AccessService');
+      AppLog.log('🔔 Notificación enviada al propietario', name: 'AccessService');
     } catch (e) {
-      dev.log('⚠️ Error creando notificación: $e', name: 'AccessService');
+      AppLog.log('⚠️ Error creando notificación: $e', name: 'AccessService');
       // No lanzar error, la notificación es secundaria
     }
   }
@@ -256,7 +256,7 @@ class AccessService {
         'tasaAprobacion': total > 0 ? (permitidos / total * 100).toStringAsFixed(1) : '0.0',
       };
     } catch (e) {
-      dev.log('Error obteniendo estadísticas: $e', name: 'AccessService');
+      AppLog.log('Error obteniendo estadísticas: $e', name: 'AccessService');
       return {
         'total': 0,
         'permitidos': 0,

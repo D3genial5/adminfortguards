@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'services/theme_service.dart';
 
 import 'screens/admin/lista_condominios_screen.dart';
@@ -17,6 +18,18 @@ import 'screens/seguridad/alertas_screen.dart';
 import 'screens/admin/ver_credenciales_screen.dart';
 
 final GoRouter _router = GoRouter(
+  redirect: (context, state) {
+    final isLoggedIn = FirebaseAuth.instance.currentUser != null;
+    final isPublicRoute = state.matchedLocation == '/' ||
+        state.matchedLocation == '/login-admin' ||
+        state.matchedLocation == '/login-seguridad';
+
+    if (!isLoggedIn && !isPublicRoute) {
+      return '/';
+    }
+
+    return null;
+  },
   routes: [
     GoRoute(
       path: '/',

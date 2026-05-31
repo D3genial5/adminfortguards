@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'dart:developer' as dev;
+import '../core/app_log.dart';
 import '../models/notificacion_model.dart';
 import 'firebase_service.dart';
 
@@ -37,9 +37,9 @@ class NotificacionService {
         sound: true,
       );
       
-      dev.log('Servicio de notificaciones inicializado correctamente');
+      AppLog.log('Servicio de notificaciones inicializado correctamente');
     } catch (e) {
-      dev.log('Error al inicializar notificaciones: $e');
+      AppLog.log('Error al inicializar notificaciones: $e');
     }
   }
   
@@ -57,7 +57,7 @@ class NotificacionService {
   static Future<void> suscribirseATopic(String condominioId) async {
     try {
       // Funcionalidad de suscripción deshabilitada
-      dev.log('Suscripción a tópico deshabilitada: $condominioId');
+      AppLog.log('Suscripción a tópico deshabilitada: $condominioId');
     } catch (e) {
       throw Exception('Error al suscribirse al tópico: $e');
     }
@@ -67,7 +67,7 @@ class NotificacionService {
   static Future<void> desuscribirseDeTopico(String condominioId) async {
     try {
       // Funcionalidad de desuscripción deshabilitada
-      dev.log('Desuscripción de tópico deshabilitada: $condominioId');
+      AppLog.log('Desuscripción de tópico deshabilitada: $condominioId');
     } catch (e) {
       throw Exception('Error al desuscribirse del tópico: $e');
     }
@@ -267,7 +267,7 @@ class NotificacionService {
       // Mostrar notificación local
       await _mostrarNotificacionLocal(notificacionEnviada);
       
-      dev.log('Notificación inmediata enviada: ${notificacion.titulo}');
+      AppLog.log('Notificación inmediata enviada: ${notificacion.titulo}');
     } catch (e) {
       throw Exception('Error al enviar notificación inmediata: $e');
     }
@@ -291,9 +291,9 @@ class NotificacionService {
       };
       
       await _firestore!.collection(_collectionPropietarios).add(dataPropietario);
-      dev.log('Notificación guardada para propietarios');
+      AppLog.log('Notificación guardada para propietarios');
     } catch (e) {
-      dev.log('Error guardando para propietarios: $e');
+      AppLog.log('Error guardando para propietarios: $e');
     }
   }
   
@@ -327,7 +327,7 @@ class NotificacionService {
         details,
       );
     } catch (e) {
-      dev.log('Error mostrando notificación local: $e');
+      AppLog.log('Error mostrando notificación local: $e');
     }
   }
 
@@ -339,7 +339,7 @@ class NotificacionService {
       );
 
       final id = await crear(notificacionProgramada);
-      dev.log('Notificación programada creada: ${notificacion.titulo}');
+      AppLog.log('Notificación programada creada: ${notificacion.titulo}');
       return id;
     } catch (e) {
       throw Exception('Error al programar notificación: $e');
@@ -377,7 +377,7 @@ class NotificacionService {
   // Reprogramar notificación recurrente
   static Future<void> reprogramarRecurrente(NotificacionModel notificacion) async {
     try {
-      dev.log('Reprogramación de notificación deshabilitada: ${notificacion.titulo}');
+      AppLog.log('Reprogramación de notificación deshabilitada: ${notificacion.titulo}');
     } catch (e) {
       throw Exception('Error al reprogramar notificación recurrente: $e');
     }

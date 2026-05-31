@@ -53,12 +53,12 @@ class AdministradorModel {
 
   factory AdministradorModel.fromFirestore(Map<String, dynamic> data) {
     return AdministradorModel(
-      nombre: data['nombre'] ?? '',
-      apellido: data['apellido'] ?? '',
-      telefono: data['telefono'] ?? '',
-      email: data['email'] ?? '',
-      cargo: data['cargo'] ?? 'Administrador',
-      esActivo: data['esActivo'] ?? true,
+      nombre: (data['nombre'] as String?) ?? '',
+      apellido: (data['apellido'] as String?) ?? '',
+      telefono: (data['telefono'] as String?) ?? '',
+      email: (data['email'] as String?) ?? '',
+      cargo: (data['cargo'] as String?) ?? 'Administrador',
+      esActivo: (data['esActivo'] as bool?) ?? true,
     );
   }
 }
@@ -186,16 +186,16 @@ class CondominioModel {
   factory CondominioModel.fromFirestore(Map<String, dynamic> data, String id) {
     return CondominioModel(
       id: id,
-      nombre: data['nombre'] ?? '',
-      direccion: data['direccion'] ?? '',
-      ciudad: data['ciudad'] ?? '',
-      telefono: data['telefono'] ?? '',
-      emailContacto: data['emailContacto'] ?? '',
-      nombreResponsable: data['nombreResponsable'] ?? '',
-      apellidoResponsable: data['apellidoResponsable'] ?? '',
-      telefonoResponsable: data['telefonoResponsable'] ?? '',
-      emailResponsable: data['emailResponsable'] ?? '',
-      cedulaResponsable: data['cedulaResponsable'] ?? '',
+      nombre: (data['nombre'] as String?) ?? '',
+      direccion: (data['direccion'] as String?) ?? '',
+      ciudad: (data['ciudad'] as String?) ?? '',
+      telefono: (data['telefono'] as String?) ?? '',
+      emailContacto: (data['emailContacto'] as String?) ?? '',
+      nombreResponsable: (data['nombreResponsable'] as String?) ?? '',
+      apellidoResponsable: (data['apellidoResponsable'] as String?) ?? '',
+      telefonoResponsable: (data['telefonoResponsable'] as String?) ?? '',
+      emailResponsable: (data['emailResponsable'] as String?) ?? '',
+      cedulaResponsable: (data['cedulaResponsable'] as String?) ?? '',
       administradores: data['administradores'] != null
           ? (data['administradores'] as List)
               .map((e) => AdministradorModel.fromFirestore(e))
@@ -205,7 +205,7 @@ class CondominioModel {
           ? (data['fechaCreacion'] as Timestamp).toDate()
           : DateTime.now(),
       notas: data['notas'],
-      esActivo: data['esActivo'] ?? true,
+      esActivo: (data['esActivo'] as bool?) ?? true,
       casas: [], // Las casas se cargan por separado
     );
   }

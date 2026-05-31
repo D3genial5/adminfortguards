@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/guardia_model.dart';
 import 'auth_service.dart';
-import 'dart:developer' as dev;
+import '../core/app_log.dart';
 
 class GuardiaService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -12,12 +12,11 @@ class GuardiaService {
     try {
       final docRef = await _firestore.collection(_collection).add(guardia.toFirestore());
       
-      // Generar credenciales automáticamente
+      // Generar credenciales y registrar en Firebase Auth
       final email = AuthService.generarEmailGuardia(guardia.nombre, guardia.apellido, guardia.condominioId);
-      final password = AuthService.generarPasswordGuardia(guardia.nombre, guardia.apellido);
-      
+      final password = AuthService.generarPasswordSeguro(length: 12);
+
       try {
-        // Registrar credenciales del guardia
         await AuthService.registrarGuardia(
           guardiaId: docRef.id,
           email: email,
@@ -26,24 +25,9 @@ class GuardiaService {
           apellido: guardia.apellido,
           condominioId: guardia.condominioId,
         );
-        
-        // Guardar credenciales en colección separada para UI
-        await _firestore.collection('credenciales').add({
-          'tipo': 'guardia',
-          'nombre': '${guardia.nombre} ${guardia.apellido}',
-          'email': email,
-          'password': password,
-          'condominio': guardia.condominioId,
-          'guardiaId': docRef.id,
-          'perfil': guardia.tipoPerfil,
-          'turno': guardia.turno,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-        
-        dev.log('Credenciales generadas para guardia: $email');
+        AppLog.log('Guardia registrado en Firebase Auth: $email');
       } catch (e) {
-        dev.log('Error al crear credenciales de guardia', error: e);
-        // No fallar la creación del guardia por error en credenciales
+        AppLog.log('Error al crear credenciales de guardia', error: e);
       }
       
       return docRef.id;

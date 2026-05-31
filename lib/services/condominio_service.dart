@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/condominio_model.dart';
 import 'auth_service.dart';
 import '../models/casa_model.dart';
-import 'dart:developer' as dev;
+import '../core/app_log.dart';
 
 class CondominioService {
   static final _db = FirebaseFirestore.instance;
@@ -25,158 +25,102 @@ class CondominioService {
   }
 
   /// Crea un condominio y sus casas en Firestore.
-  /// También genera automáticamente contraseñas para acceso de propietarios.
-  static Future<void> agregar(CondominioModel condominio) async {
+  /// Genera contraseñas seguras hasheadas. Las contraseñas temporales se
+  /// devuelven en el resultado para mostrarlas una sola vez al admin.
+  static Future<Map<String, List<Map<String, String>>>> agregar(
+      CondominioModel condominio) async {
     final doc = _db.collection('condominios').doc(condominio.nombre);
-    
-    // Usar toFirestore del modelo actualizado
+
     final condominioData = condominio.toFirestore();
     condominioData['id'] = condominio.id;
     condominioData['createdAt'] = FieldValue.serverTimestamp();
-    
+
     await doc.set(condominioData);
-    
-    // 2. Registrar administrador
+
+    // Credenciales temporales para mostrar una sola vez
+    final credencialesGeneradas = <Map<String, String>>[];
+
+    // 1. Registrar administrador con Firebase Auth
     final adminEmail = AuthService.generarEmailAdmin(condominio.nombre);
-    final adminPassword = AuthService.generarPasswordAdmin(condominio.nombre);
-    
+    final adminPassword = AuthService.generarPasswordSeguro();
+
     try {
-      // Registrar administrador en la colección administradores (con hash)
       await AuthService.registrarAdmin(
         email: adminEmail,
         password: adminPassword,
         nombre: 'Administrador de ${condominio.nombre}',
         condominioId: condominio.nombre,
       );
-      
-      // Guardar credenciales en colección separada para UI
-      await _db.collection('credenciales').add({
+      credencialesGeneradas.add({
         'tipo': 'administrador',
         'email': adminEmail,
-        'password': adminPassword, // Solo para mostrar en UI
-        'nombre': 'Administrador de ${condominio.nombre}',
+        'password': adminPassword,
         'condominio': condominio.nombre,
-        'createdAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      dev.log('Error al crear cuenta de administrador', error: e);
+      AppLog.log('Error al crear cuenta de administrador', error: e);
     }
-    
-    // Crear las casas y sus contraseñas
+
+    // 2. Crear las casas con contraseñas hasheadas
     for (final casa in condominio.casas) {
-      // Generar contraseña para la casa
-      final password = AuthService.generarPasswordPropietario(casa.nombre);
-      
-      // Usar toFirestore del modelo de casa
+      final password = AuthService.generarPasswordSeguro(length: 10);
+      final realSalt = AuthService.generarPasswordSeguro(length: 16);
+      final hash = AuthService.hashWithSalt(password, realSalt);
+
       final casaData = casa.toFirestore();
       casaData['numero'] = int.tryParse(casa.nombre) ?? casa.nombre;
       casaData['estadoExpensa'] = 'pendiente';
-      casaData['password'] = password; // Guardar contraseña en la casa directamente
-      
-      // Guardar casa en Firestore
+      casaData['passwordHash'] = hash;
+      casaData['passwordSalt'] = realSalt;
+      // No almacenar password en texto plano
+
       await doc.collection('casas').doc(casa.nombre).set(casaData);
-      
-      try {
-        // Registrar formalmente la contraseña de la casa
-        await AuthService.registrarCasa(
-          condominioId: condominio.nombre,
-          casaId: casa.nombre,
-          password: password,
-        );
-        
-        // Guardar las credenciales del propietario en una colección separada
-        await _db.collection('credenciales').add({
-          'tipo': 'propietario',
-          'condominio': condominio.nombre,
-          'casa': casa.nombre,
-          'password': password,
-          'propietario': casa.propietario,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-      } catch (e) {
-        // Si falla la creación de credenciales, seguimos con el siguiente
-        dev.log('Error al registrar credenciales para casa ${casa.nombre}', error: e);
-      }
+
+      credencialesGeneradas.add({
+        'tipo': 'propietario',
+        'casa': casa.nombre,
+        'password': password,
+        'condominio': condominio.nombre,
+        'propietario': casa.propietario,
+      });
     }
+
+    return {'credenciales': credencialesGeneradas};
   }
 
-  /// Migra condominios existentes (ya creados previamente) a la nueva
-  /// estructura asegurando que tengan administrador, contraseñas y campos
-  /// actualizados.
+  /// Migra condominios existentes: asegura campos base y hashea passwords legacy.
+  /// NO crea credenciales en colección separada (ese flujo fue eliminado).
   static Future<void> migrarExistentes() async {
     final snap = await _db.collection('condominios').get();
     for (final doc in snap.docs) {
-      final nombreCondo = (doc.data()['nombre'] ?? doc.id).toString();
-
-      // 0. Asegurar campos base (id y createdAt)
+      // 0. Asegurar campos base
       final dataDoc = doc.data();
       final updates = <String, dynamic>{};
-      if (!(dataDoc.containsKey('id'))) {
+      if (!dataDoc.containsKey('id')) {
         updates['id'] = DateTime.now().millisecondsSinceEpoch.toString();
       }
-      if (!(dataDoc.containsKey('createdAt'))) {
+      if (!dataDoc.containsKey('createdAt')) {
         updates['createdAt'] = FieldValue.serverTimestamp();
       }
       if (updates.isNotEmpty) {
         await doc.reference.update(updates);
       }
 
-      // 1. Asegurar administrador
-      final adminQuery = await _db
-          .collection('credenciales')
-          .where('tipo', isEqualTo: 'administrador')
-          .where('condominio', isEqualTo: nombreCondo)
-          .limit(1)
-          .get();
-      if (adminQuery.docs.isEmpty) {
-        final email = AuthService.generarEmailAdmin(nombreCondo);
-        final password = AuthService.generarPasswordAdmin(nombreCondo);
-        final adminEmail = AuthService.generarEmailAdmin(doc.id);
-        final adminPassword = AuthService.generarPasswordAdmin(doc.id);
-        await AuthService.registrarAdmin(
-          email: adminEmail,
-          password: adminPassword,
-          nombre: 'Administrador de ${doc.id}',
-          condominioId: doc.id,
-        );
-        await _db.collection('credenciales').add({
-          'tipo': 'administrador',
-          'email': email,
-          'password': password,
-          'nombre': 'Administrador de $nombreCondo',
-          'condominio': nombreCondo,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-      }
-
-      // 2. Procesar casas
+      // 1. Migrar contraseñas de casas: plain-text → hash con sal
       final casasSnap = await doc.reference.collection('casas').get();
       for (final casaDoc in casasSnap.docs) {
-        final casaId = casaDoc.id;
         final datos = casaDoc.data();
-        final tienePassword = datos.containsKey('password');
-        if (!tienePassword) {
-          final password = AuthService.generarPasswordPropietario(casaId);
-          await casaDoc.reference.update({'password': password});
-
-          // Registrar credencial propietario si falta
-          final credQuery = await _db
-              .collection('credenciales')
-              .where('tipo', isEqualTo: 'propietario')
-              .where('condominio', isEqualTo: nombreCondo)
-              .where('casa', isEqualTo: casaId)
-              .limit(1)
-              .get();
-          if (credQuery.docs.isEmpty) {
-            await _db.collection('credenciales').add({
-              'tipo': 'propietario',
-              'condominio': nombreCondo,
-              'casa': casaId,
-              'password': password,
-              'propietario': datos['propietario'] ?? '',
-              'createdAt': FieldValue.serverTimestamp(),
-            });
-          }
+        final hasLegacyPassword = datos.containsKey('password') && !datos.containsKey('passwordHash');
+        if (hasLegacyPassword) {
+          final plainPassword = datos['password'] as String;
+          final salt = AuthService.generarPasswordSeguro(length: 16);
+          final hash = AuthService.hashWithSalt(plainPassword, salt);
+          await casaDoc.reference.update({
+            'passwordHash': hash,
+            'passwordSalt': salt,
+            'password': FieldValue.delete(),
+          });
+          AppLog.log('Migrada casa ${casaDoc.id} en ${doc.id} a hash con sal');
         }
       }
     }
@@ -199,18 +143,7 @@ class CondominioService {
     // Ejecutar el batch para eliminar todas las casas
     await batch.commit();
     
-    // 2. Eliminar credenciales asociadas (administrador y propietarios)
-    final credSnap = await _db
-        .collection('credenciales')
-        .where('condominio', isEqualTo: condominioId)
-        .get();
-    final credBatch = _db.batch();
-    for (final c in credSnap.docs) {
-      credBatch.delete(c.reference);
-    }
-    await credBatch.commit();
-
-    // 3. Eliminar administradores asociados
+    // 2. Eliminar administradores asociados
     final adminSnap = await _db
         .collection('administradores')
         .where('condominio', isEqualTo: condominioId)
@@ -221,7 +154,7 @@ class CondominioService {
     }
     await adminBatch.commit();
 
-    // 4. Eliminar el documento del condominio
+    // 3. Eliminar el documento del condominio
     await docRef.delete();
   }
 }

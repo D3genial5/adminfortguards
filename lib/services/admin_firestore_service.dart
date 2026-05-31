@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
-import 'dart:developer' as dev;
+import '../core/app_log.dart';
 import 'auth_service.dart';
 
 /// Servicio centralizado para tareas que realiza el administrador de un condominio.
@@ -15,40 +14,6 @@ class AdminFirestoreService {
   /// Obtiene todas las casas de un condominio (snapshot único)
   static Future<QuerySnapshot<Map<String, dynamic>>> obtenerCasas(String condominioId) async {
     return await _db.collection('condominios').doc(condominioId).collection('casas').get();
-  }
-
-  /// Stream del documento del condominio (configuración, flags, etc.)
-  static Stream<DocumentSnapshot<Map<String, dynamic>>> streamCondominio(
-      String condominioId) {
-    return _db.collection('condominios').doc(condominioId).snapshots();
-  }
-
-  /// Garantiza que el documento del condominio exista; lo crea con valores por
-  /// defecto si falta. Devuelve el documento resultante.
-  static Future<DocumentSnapshot<Map<String, dynamic>>> ensureCondominioExists(
-      String condominioId) async {
-    final ref = _db.collection('condominios').doc(condominioId);
-    final snap = await ref.get();
-    if (!snap.exists) {
-      await ref.set({
-        'nombre': condominioId,
-        'expensasHabilitadas': true,
-        'creadoEn': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-      return ref.get();
-    }
-    return snap;
-  }
-
-  /// Habilita o deshabilita la sección de expensas para el condominio.
-  static Future<void> setExpensasHabilitadas({
-    required String condominioId,
-    required bool habilitadas,
-  }) async {
-    await _db.collection('condominios').doc(condominioId).set(
-      {'expensasHabilitadas': habilitadas},
-      SetOptions(merge: true),
-    );
   }
 
   /// Crea o actualiza una casa
@@ -102,68 +67,22 @@ class AdminFirestoreService {
       data['telefonoResidente'] = telefonoResidente;
     }
 
-    // Si es una casa nueva, generar contraseña y crear credenciales
     if (isNuevaCasa) {
-      // Generar contraseña para el propietario
-      final password = AuthService.generarPasswordPropietario(numero.toString());
-      data['password'] = password;
-      
-      // Guardar la casa
+      // Generar contraseña hasheada para el propietario
+      final password = AuthService.generarPasswordSeguro(length: 10);
+      final salt = AuthService.generarPasswordSeguro(length: 16);
+      final hash = AuthService.hashWithSalt(password, salt);
+      data['passwordHash'] = hash;
+      data['passwordSalt'] = salt;
+
       await casaRef.set(data, SetOptions(merge: true));
-      
-      try {
-        // Registrar la casa en el sistema de autenticación
-        await AuthService.registrarCasa(
-          condominioId: condominioId,
-          casaId: numero.toString(),
-          password: password,
-        );
-        
-        // Guardar las credenciales del propietario en la colección 'credenciales'
-        await _db.collection('credenciales').add({
-          'tipo': 'propietario',
-          'condominio': condominioId,
-          'casa': numero.toString(),
-          'password': password,
-          'propietario': propietario,
-          'email': emailPropietario ?? '',
-          'telefono': telefonoPropietario ?? '',
-          'cedula': cedulaPropietario ?? '',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-        
-        dev.log('✅ Casa $numero creada con credenciales para propietario: $propietario');
-      } catch (e) {
-        dev.log('⚠️ Error al crear credenciales para casa $numero', error: e);
-        // La casa ya fue guardada, el error en credenciales no debe bloquear
-      }
+
+      // La contraseña temporal se devuelve para mostrar una sola vez
+      AppLog.log('Casa $numero creada para propietario: $propietario');
     } else {
-      // Si es una edición, solo actualizar los datos (mantener password existente)
+      // Edición: solo actualizar datos (no tocar password)
       await casaRef.set(data, SetOptions(merge: true));
-      
-      // Actualizar las credenciales existentes si hay cambios en el propietario
-      try {
-        final credQuery = await _db
-            .collection('credenciales')
-            .where('condominio', isEqualTo: condominioId)
-            .where('casa', isEqualTo: numero.toString())
-            .where('tipo', isEqualTo: 'propietario')
-            .limit(1)
-            .get();
-        
-        if (credQuery.docs.isNotEmpty) {
-          await credQuery.docs.first.reference.update({
-            'propietario': propietario,
-            'email': emailPropietario ?? '',
-            'telefono': telefonoPropietario ?? '',
-            'cedula': cedulaPropietario ?? '',
-            'fechaActualizacion': FieldValue.serverTimestamp(),
-          });
-          dev.log('✅ Credenciales actualizadas para casa $numero');
-        }
-      } catch (e) {
-        dev.log('⚠️ Error al actualizar credenciales para casa $numero', error: e);
-      }
+      AppLog.log('Casa $numero actualizada');
     }
   }
 
@@ -234,9 +153,9 @@ class AdminFirestoreService {
       }
       
       await expensaRef.set(data, SetOptions(merge: true));
-      dev.log('✅ Expensa sincronizada: Casa $casaNumero - ${pagada ? "Pagada" : "Pendiente"}');
+      AppLog.log('✅ Expensa sincronizada: Casa $casaNumero - ${pagada ? "Pagada" : "Pendiente"}');
     } catch (e) {
-      dev.log('⚠️ Error al sincronizar expensa: $e');
+      AppLog.log('⚠️ Error al sincronizar expensa: $e');
     }
   }
   
@@ -248,131 +167,64 @@ class AdminFirestoreService {
         .snapshots();
   }
 
-  /// Actualiza las credenciales de un administrador en el sistema
-  static Future<void> actualizarCredencialesAdmin({
+  /// Stream del documento del condominio (para escuchar expensasHabilitadas)
+  static Stream<DocumentSnapshot<Map<String, dynamic>>> streamCondominio(String condominioId) {
+    return _db.collection('condominios').doc(condominioId).snapshots();
+  }
+
+  /// Lee si las expensas están habilitadas para un condominio
+  static Future<bool> expensasHabilitadas(String condominioId) async {
+    final doc = await _db.collection('condominios').doc(condominioId).get();
+    if (!doc.exists) return true;
+    return doc.data()?['expensasHabilitadas'] ?? true;
+  }
+
+  /// Activa o desactiva las expensas para un condominio
+  static Future<void> setExpensasHabilitadas({
+    required String condominioId,
+    required bool habilitadas,
+  }) async {
+    await _db.collection('condominios').doc(condominioId).set(
+      {'expensasHabilitadas': habilitadas},
+      SetOptions(merge: true),
+    );
+    AppLog.log('${habilitadas ? '✅' : '🚫'} Expensas ${habilitadas ? 'habilitadas' : 'inhabilitadas'} para $condominioId');
+  }
+
+  /// Actualiza datos del administrador en Firestore (sin contraseñas).
+  /// El cambio de contraseña se maneja vía Firebase Auth.
+  static Future<void> actualizarDatosAdmin({
     required String email,
-    required String nuevaContrasena,
+    required String nombre,
+    required String condominioId,
   }) async {
     try {
-      // Buscar el documento del administrador en la colección credenciales
-      // Primero intentar con tipo "administrador"
-      var query = await _db
-          .collection('credenciales')
+      final query = await _db
+          .collection('administradores')
           .where('email', isEqualTo: email)
-          .where('tipo', isEqualTo: 'administrador')
           .limit(1)
           .get();
 
-      // Si no encuentra, intentar con tipo "admin"
-      if (query.docs.isEmpty) {
-        query = await _db
-            .collection('credenciales')
-            .where('email', isEqualTo: email)
-            .where('tipo', isEqualTo: 'admin')
-            .limit(1)
-            .get();
-      }
-
-      // Si aún no encuentra, buscar solo por email
-      if (query.docs.isEmpty) {
-        query = await _db
-            .collection('credenciales')
-            .where('email', isEqualTo: email)
-            .limit(1)
-            .get();
-      }
-
       if (query.docs.isNotEmpty) {
-        // Actualizar la contraseña en el documento encontrado
         await query.docs.first.reference.update({
-          'password': nuevaContrasena,
+          'nombre': nombre,
+          'condominio': condominioId,
           'fechaActualizacion': FieldValue.serverTimestamp(),
         });
-        
-        debugPrint('✅ Credenciales actualizadas para: $email');
-        debugPrint('📄 Documento actualizado: ${query.docs.first.id}');
-      } else {
-        debugPrint('⚠️ No se encontró documento de credenciales para: $email');
-        
-        // Buscar en todos los documentos para debug
-        final allDocs = await _db.collection('credenciales').get();
-        debugPrint('📋 Total documentos en credenciales: ${allDocs.docs.length}');
-        for (var doc in allDocs.docs) {
-          final data = doc.data();
-          debugPrint('  - ID: ${doc.id}');
-          debugPrint('    Email: ${data['email']}');
-          debugPrint('    Tipo: ${data['tipo']}');
-          debugPrint('    Nombre: ${data['nombre']}');
-        }
       }
     } catch (e) {
-      debugPrint('❌ Error al actualizar credenciales: $e');
-      throw Exception('Error al actualizar credenciales: $e');
+      AppLog.log('Error al actualizar datos admin: $e');
+      throw Exception('Error al actualizar datos: $e');
     }
   }
 
   /// Envía una notificación a un propietario
 
-  /// Si el condominio no tiene casas, crear datos de prueba
-  static Future<void> seedIfEmpty(String condominioId) async {
+  /// Verifica que el documento del condominio exista.
+  static Future<void> ensureCondominioExists(String condominioId) async {
     final docRef = _db.collection('condominios').doc(condominioId);
-    // asegurar que el documento del condominio existe
     await docRef.set({'nombre': condominioId}, SetOptions(merge: true));
-
-    final col = docRef.collection('casas');
-    final snap = await col.limit(1).get();
-    if (snap.docs.isNotEmpty) return; // ya tiene datos
-
-    final seed = _seedData[condominioId] ?? [];
-    for (final casa in seed) {
-      await col.doc(casa['numero'].toString()).set(casa);
-    }
   }
-
-  static final _seedData = {
-    'Los Alamos': [
-      {
-        'numero': 1,
-        'propietario': 'Juan Pérez',
-        'residentes': ['Juan Pérez', 'Ana Gómez'],
-        'estadoExpensa': 'pagada',
-      },
-      {
-        'numero': 2,
-        'propietario': 'Laura Rojas',
-        'residentes': ['Laura Rojas', 'Miguel Rojas'],
-        'estadoExpensa': 'pendiente',
-      },
-    ],
-    'El Bosque': [
-      {
-        'numero': 1,
-        'propietario': 'Carlos Acosta',
-        'residentes': ['Carlos Acosta', 'Lucía Romero'],
-        'estadoExpensa': 'pagada',
-      },
-      {
-        'numero': 2,
-        'propietario': 'María Torres',
-        'residentes': ['María Torres'],
-        'estadoExpensa': 'pendiente',
-      },
-    ],
-    'Villa del Rocio': [
-      {
-        'numero': 1,
-        'propietario': 'Fernando Bustamante',
-        'residentes': ['Fernando Bustamante', 'Elena Vargas'],
-        'estadoExpensa': 'pagada',
-      },
-      {
-        'numero': 2,
-        'propietario': 'Jorge Ramírez',
-        'residentes': ['Jorge Ramírez', 'Claudia Torrez', 'Mateo Ramírez'],
-        'estadoExpensa': 'pendiente',
-      },
-    ],
-  };
 
   static Future<void> enviarNotificacion({
     required String condominioId,
@@ -389,67 +241,4 @@ class AdminFirestoreService {
     });
   }
 
-  /// Limpia credenciales duplicadas en un condominio
-  /// Mantiene solo la más reciente de cada combinación condominio+casa+tipo
-  static Future<Map<String, dynamic>> limpiarCredencialesDuplicadas(String condominioId) async {
-    try {
-      final snapshot = await _db
-          .collection('credenciales')
-          .where('condominio', isEqualTo: condominioId)
-          .get();
-      
-      // Agrupar por casa+tipo
-      final grupos = <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
-      
-      for (final doc in snapshot.docs) {
-        final data = doc.data();
-        final casa = data['casa']?.toString() ?? '';
-        final tipo = data['tipo']?.toString() ?? '';
-        final key = '$casa-$tipo';
-        
-        grupos.putIfAbsent(key, () => []);
-        grupos[key]!.add(doc);
-      }
-      
-      int eliminados = 0;
-      final duplicadosEncontrados = <String>[];
-      
-      // Para cada grupo con más de 1 documento, eliminar los duplicados
-      for (final entry in grupos.entries) {
-        if (entry.value.length > 1) {
-          duplicadosEncontrados.add('Casa ${entry.key.split('-')[0]}');
-          
-          // Ordenar por fecha de creación (si existe) o mantener el primero
-          entry.value.sort((a, b) {
-            final fechaA = a.data()['fechaCreacion'] as Timestamp?;
-            final fechaB = b.data()['fechaCreacion'] as Timestamp?;
-            if (fechaA == null && fechaB == null) return 0;
-            if (fechaA == null) return 1;
-            if (fechaB == null) return -1;
-            return fechaB.compareTo(fechaA); // Más reciente primero
-          });
-          
-          // Eliminar todos excepto el primero (más reciente)
-          for (int i = 1; i < entry.value.length; i++) {
-            await entry.value[i].reference.delete();
-            eliminados++;
-          }
-        }
-      }
-      
-      dev.log('✅ Limpieza completada: $eliminados duplicados eliminados', name: 'AdminFirestoreService');
-      
-      return {
-        'exito': true,
-        'eliminados': eliminados,
-        'duplicados': duplicadosEncontrados,
-      };
-    } catch (e) {
-      dev.log('❌ Error limpiando duplicados: $e', name: 'AdminFirestoreService');
-      return {
-        'exito': false,
-        'error': e.toString(),
-      };
-    }
-  }
 }

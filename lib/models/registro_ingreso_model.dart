@@ -35,11 +35,11 @@ class RegistroIngresoModel {
     final data = doc.data() as Map<String, dynamic>;
     return RegistroIngresoModel(
       id: doc.id,
-      guardiaId: data['guardiaId'] ?? '',
-      guardiaNombre: data['guardiaNombre'] ?? '',
-      condominio: data['condominio'] ?? '',
-      usuarioNombre: data['usuarioNombre'] ?? '',
-      tipoUsuario: data['tipoUsuario'] ?? '',
+      guardiaId: (data['guardiaId'] as String?) ?? '',
+      guardiaNombre: (data['guardiaNombre'] as String?) ?? '',
+      condominio: (data['condominio'] as String?) ?? '',
+      usuarioNombre: (data['usuarioNombre'] as String?) ?? '',
+      tipoUsuario: (data['tipoUsuario'] as String?) ?? '',
       casa: data['casa'],
       visitanteCI: data['visitanteCI'],
       motivoVisita: data['motivoVisita'],
@@ -48,7 +48,7 @@ class RegistroIngresoModel {
       fechaSalida: data['fechaSalida'] != null 
           ? (data['fechaSalida'] as Timestamp).toDate() 
           : null,
-      estado: data['estado'] ?? 'ingresado',
+      estado: (data['estado'] as String?) ?? 'ingresado',
     );
   }
 

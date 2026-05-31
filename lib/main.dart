@@ -7,10 +7,11 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/firebase_service.dart';
 import 'services/notification_service.dart';
+import 'core/firebase_emulator.dart';
 import 'app.dart';
 
 Future<void> main() async {
-  runZonedGuarded<Future<void>>(() async {
+  await runZonedGuarded<Future<void>>(() async {
     WidgetsFlutterBinding.ensureInitialized();
 
     try {
@@ -18,6 +19,7 @@ Future<void> main() async {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
       await FirebaseService.initialize();
+      await FirebaseEmulator.wireUp();
 
       FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
       await FirebaseCrashlytics.instance

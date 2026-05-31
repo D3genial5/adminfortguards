@@ -33,9 +33,9 @@ class NotificacionModel {
   factory NotificacionModel.fromFirestore(Map<String, dynamic> data, String id) {
     return NotificacionModel(
       id: id,
-      condominioId: data['condominioId'] ?? '',
-      titulo: data['titulo'] ?? '',
-      mensaje: data['mensaje'] ?? '',
+      condominioId: (data['condominioId'] as String?) ?? '',
+      titulo: (data['titulo'] as String?) ?? '',
+      mensaje: (data['mensaje'] as String?) ?? '',
       prioridad: PrioridadNotificacion.values.firstWhere(
         (p) => p.name == data['prioridad'],
         orElse: () => PrioridadNotificacion.media,
@@ -51,7 +51,7 @@ class NotificacionModel {
         orElse: () => EstadoNotificacion.programada,
       ),
       destinatarios: List<String>.from(data['destinatarios'] ?? []),
-      creadoPor: data['creadoPor'] ?? '',
+      creadoPor: (data['creadoPor'] as String?) ?? '',
     );
   }
 

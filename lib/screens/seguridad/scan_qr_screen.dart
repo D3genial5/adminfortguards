@@ -2,9 +2,9 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:convert';
-import 'dart:developer' as dev;
+import '../../core/app_log.dart';
 import '../../services/registro_ingreso_service.dart';
+import '../../services/qr_verify_service.dart';
 
 class ScanQrScreen extends StatefulWidget {
   final Map<String, dynamic>? guardiaData;
@@ -72,180 +72,15 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
         throw Exception('Error: Datos del guardia incompletos');
       }
 
-      Map<String, dynamic> qrInfo;
-      Map<String, dynamic>? visitanteInfo;
-      
-      // NUEVO: Primero intentar buscar por código QR único en access_requests
-      if (!qrData.startsWith('{') && !qrData.contains('CONDO:')) {
-        // Es un código QR único (ej: "ABC12345")
-        final solicitudQuery = await FirebaseFirestore.instance
-            .collection('access_requests')
-            .where('codigoQr', isEqualTo: qrData)
-            .where('estado', isEqualTo: 'aceptada')
-            .limit(1)
-            .get();
-        
-        if (solicitudQuery.docs.isEmpty) {
-          throw Exception('QR no válido o no autorizado');
-        }
-        
-        final solicitud = solicitudQuery.docs.first.data();
-        final solicitudId = solicitudQuery.docs.first.id;
-        
-        // Verificar que sea del mismo condominio
-        if (solicitud['condominio'] != condominioGuardia) {
-          throw Exception('Este QR es de otro condominio');
-        }
-        
-        // Verificar usos restantes
-        final usosRestantes = solicitud['usosRestantes'] as int?;
-        final tipoAcceso = solicitud['tipoAcceso'] as String?;
-        
-        if (tipoAcceso != 'indefinido' && usosRestantes != null && usosRestantes <= 0) {
-          throw Exception('QR sin usos restantes');
-        }
-        
-        // Verificar expiración
-        final fechaExp = solicitud['fechaExpiracion'];
-        if (fechaExp != null) {
-          DateTime? expiracion;
-          if (fechaExp is Timestamp) {
-            expiracion = fechaExp.toDate();
-          } else if (fechaExp is String) {
-            expiracion = DateTime.tryParse(fechaExp);
-          }
-          if (expiracion != null && DateTime.now().isAfter(expiracion)) {
-            throw Exception('QR expirado');
-          }
-        }
-        
-        // Buscar datos del visitante en la colección visitantes
-        final ci = solicitud['ci'] as String?;
-        if (ci != null) {
-          final visitanteDoc = await FirebaseFirestore.instance
-              .collection('visitantes')
-              .doc(ci)
-              .get();
-          if (visitanteDoc.exists) {
-            visitanteInfo = visitanteDoc.data();
-          }
-        }
-        
-        qrInfo = {
-          'condominio': solicitud['condominio'],
-          'casa': 'Casa ${solicitud['casaNumero']}',
-          'casaNumero': solicitud['casaNumero'],
-          'visitante': solicitud['nombre'] ?? 'Visitante',
-          'ci': solicitud['ci'],
-          'tipoAcceso': tipoAcceso,
-          'usosRestantes': usosRestantes,
-          'codigoQr': qrData,
-          'solicitudId': solicitudId,
-          'fotoCarnetFrente': visitanteInfo?['fotoCarnetFrente'],
-          'fotoCarnetReverso': visitanteInfo?['fotoCarnetReverso'],
-          'fotoPlaca': visitanteInfo?['fotoPlaca'],
-          'placa': visitanteInfo?['placa'] ?? solicitud['placa'],
-        };
-        
-      } else if (qrData.startsWith('{')) {
-        // Formato JSON legacy
-        qrInfo = json.decode(qrData);
-      } else if (qrData.contains('CONDO:') && qrData.contains('CASA:')) {
-        // Formato con tipo de acceso: ENTRADA|SESSION:xxx|CONDO:Sky|CASA:Casa 320
-        // O formato legacy: CONDO:Sky|CASA:Casa 320
-        final parts = qrData.split('|');
-        
-        // Detectar tipo, sesión y datos del visitante embebidos en el QR
-        String? tipoQr;
-        String? sessionId;
-        String? ciFromQr;
-        String? nombreFromQr;
-        bool origenCodigoCasa = false;
-        for (final part in parts) {
-          if (part == 'ENTRADA' || part == 'SALIDA') {
-            tipoQr = part;
-          } else if (part.startsWith('SESSION:')) {
-            sessionId = part.substring(8);
-          } else if (part == 'ORIGEN:CASA') {
-            origenCodigoCasa = true;
-          } else if (part.startsWith('CI:')) {
-            ciFromQr = part.substring(3);
-          } else if (part.startsWith('NOMBRE:')) {
-            nombreFromQr = Uri.decodeComponent(part.substring(7));
-          }
-        }
-        
-        final condoPart = parts.firstWhere((p) => p.startsWith('CONDO:'), orElse: () => '');
-        final casaPart = parts.firstWhere((p) => p.startsWith('CASA:'), orElse: () => '');
-        
-        if (condoPart.isEmpty || casaPart.isEmpty) {
-          throw Exception('Formato QR no válido');
-        }
-        
-        final condominio = condoPart.substring(6);
-        final casa = casaPart.substring(5);
-        
-        // Verificar condominio para formato legacy
-        if (condominio != condominioGuardia) {
-          throw Exception('QR de otro condominio');
-        }
-        
-        // Extraer número de casa
-        final casaNumMatch = RegExp(r'(\d+)').firstMatch(casa);
-        final casaNum = casaNumMatch != null ? int.parse(casaNumMatch.group(1)!) : 0;
-        
-        // IMPORTANTE: Consultar Firestore para obtener datos reales del visitante
-        int? usosRestantes;
-        String tipoAcceso = 'usos';
-        String nombreVisitante = nombreFromQr ?? 'Visitante';
-        String? ciVisitante = ciFromQr;
-        String? fotoFrente;
-        String? fotoReverso;
-        
-        try {
-          final casaDoc = await FirebaseFirestore.instance
-              .collection('condominios')
-              .doc(condominio)
-              .collection('casas')
-              .doc(casaNum.toString())
-              .get();
-          
-          if (casaDoc.exists) {
-            final data = casaDoc.data();
-            
-            // Obtener usos del código
-            usosRestantes = data?['codigoUsos'] as int?;
-            tipoAcceso = usosRestantes != null ? 'usos' : 'indefinido';
-            
-            // Obtener datos del ÚLTIMO visitante que ingresó el código
-            nombreVisitante = nombreVisitante == 'Visitante'
-                ? (data?['ultimoVisitanteNombre'] as String? ?? 'Visitante')
-                : nombreVisitante;
-            ciVisitante ??= data?['ultimoVisitanteCI'] as String?;
-            fotoFrente = data?['ultimoVisitanteFotoFrente'] as String?;
-            fotoReverso = data?['ultimoVisitanteFotoReverso'] as String?;
-          }
-        } catch (e) {
-          dev.log('Error consultando datos de la casa: $e', name: 'ScanQrScreen');
-        }
-        
-        qrInfo = {
-          'condominio': condominio,
-          'casa': casa,
-          'casaNumero': casaNum,
-          'visitante': nombreVisitante,
-          'ci': ciVisitante,
-          'tipoAcceso': tipoAcceso,
-          'usosRestantes': usosRestantes,
-          'fotoCarnetFrente': fotoFrente,
-          'fotoCarnetReverso': fotoReverso,
-          'sessionId': sessionId,
-          'tipoQr': tipoQr,
-          'origenCodigoCasa': origenCodigoCasa,
-        };
-      } else {
-        throw Exception('Formato QR no reconocido');
+      // Verificación unificada — rechaza QRs sin respaldo en Firestore o sin firma
+      final verifyResult = await QrVerifyService.verify(
+        qrData,
+        condominioGuardia: condominioGuardia,
+      );
+      if (!verifyResult.valid) {
+        throw Exception(verifyResult.reason ?? 'QR no válido');
       }
+      final qrInfo = verifyResult.toQrInfo();
 
       // DETECCIÓN AUTOMÁTICA: Verificar si ya tiene un ingreso activo
       // IMPORTANTE: Solo detectar entrada/salida para visitantes CON CI
@@ -323,7 +158,7 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
       _mostrarConfirmacionCompleta(qrInfo, esEntrada: esEntrada);
       
     } catch (e) {
-      dev.log('Error procesando QR: $e', name: 'ScanQrScreen');
+      AppLog.log('Error procesando QR: $e', name: 'ScanQrScreen');
       if (!mounted) return;
       
       setState(() {

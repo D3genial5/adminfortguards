@@ -1,6 +1,6 @@
+import 'package:flutter/foundation.dart';
 import '../models/condominio_model.dart';
 import 'condominio_service.dart';
-import 'auth_service.dart';
 
 /// Servicio de utilidades para migraciones puntuales.
 ///
@@ -33,8 +33,8 @@ class MigracionService {
     // Migrar estructuras de condominios
     await CondominioService.migrarExistentes();
 
-    // Migrar hashes de administradores (contraseñas planas -> hash)
-    await AuthService.migrarPasswordsAHash();
+    // La migración de contraseñas legacy (plain-text → hash/Firebase Auth)
+    // ocurre automáticamente durante el login de cada usuario.
 
     await docRef.set({
       'hecha': true,
@@ -51,7 +51,7 @@ class MigracionService {
         // con el siguiente para no detener la migración completa.
         // En una migración real podrías registrar un log más detallado.
         // ignore: avoid_print
-        print('Error migrando ${condo.nombre}: $e');
+        if (kDebugMode) debugPrint('Error migrando ${condo.nombre}: $e');
       }
     }
   }

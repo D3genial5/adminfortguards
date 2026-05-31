@@ -50,15 +50,15 @@ class ConfiguracionModel {
   // Crear desde Firestore (opcional para sincronización)
   factory ConfiguracionModel.fromFirestore(Map<String, dynamic> data) {
     return ConfiguracionModel(
-      notificacionesActivadas: data['notificacionesActivadas'] ?? true,
-      sonidoActivado: data['sonidoActivado'] ?? true,
-      vibracionActivada: data['vibracionActivada'] ?? true,
-      modoOscuroAutomatico: data['modoOscuroAutomatico'] ?? false,
-      idioma: data['idioma'] ?? 'es',
+      notificacionesActivadas: (data['notificacionesActivadas'] as bool?) ?? true,
+      sonidoActivado: (data['sonidoActivado'] as bool?) ?? true,
+      vibracionActivada: (data['vibracionActivada'] as bool?) ?? true,
+      modoOscuroAutomatico: (data['modoOscuroAutomatico'] as bool?) ?? false,
+      idioma: (data['idioma'] as String?) ?? 'es',
       ultimoBackup: data['ultimoBackup'] != null 
           ? (data['ultimoBackup'] as Timestamp).toDate()
           : null,
-      version: data['version'] ?? '1.0.0',
+      version: (data['version'] as String?) ?? '1.0.0',
     );
   }
 

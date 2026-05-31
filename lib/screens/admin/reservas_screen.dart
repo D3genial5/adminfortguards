@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/reserva_model.dart';
 import '../../services/reservas_service.dart';
 import 'gestion_areas_screen.dart';
@@ -336,7 +337,7 @@ class _ReservasScreenState extends State<ReservasScreen> with SingleTickerProvid
             await ReservasService.aprobarReserva(
               widget.condominioId,
               reserva.id,
-              'Admin', // TODO: Obtener usuario actual
+              FirebaseAuth.instance.currentUser?.uid ?? 'admin',
               costoAdicional: costoAdicional,
               observaciones: observaciones,
             );
@@ -375,7 +376,7 @@ class _ReservasScreenState extends State<ReservasScreen> with SingleTickerProvid
             await ReservasService.rechazarReserva(
               widget.condominioId,
               reserva.id,
-              'Admin', // TODO: Obtener usuario actual
+              FirebaseAuth.instance.currentUser?.uid ?? 'admin',
               motivo,
             );
             

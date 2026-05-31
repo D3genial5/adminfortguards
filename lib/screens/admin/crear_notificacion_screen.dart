@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/notificacion_model.dart';
 import '../../services/notificacion_service.dart';
 
@@ -674,7 +675,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
         repeticion: _repeticion,
         estado: EstadoNotificacion.programada,
         destinatarios: _destinatarios,
-        creadoPor: 'admin', // TODO: Obtener del usuario actual
+        creadoPor: FirebaseAuth.instance.currentUser?.uid ?? 'admin',
       );
 
       if (_esEdicion) {

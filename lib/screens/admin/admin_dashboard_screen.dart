@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/admin_firestore_service.dart';
@@ -28,13 +29,13 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String get condominioId => widget.condominioId;
   bool _expensasHabilitadas = true;
-  late final Stream<DocumentSnapshot<Map<String, dynamic>>> _condominioStream;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _condoSub;
 
   @override
   void initState() {
     super.initState();
-    _condominioStream = AdminFirestoreService.streamCondominio(condominioId);
-    _condominioStream.listen((snapshot) {
+    _condoSub = AdminFirestoreService.streamCondominio(condominioId)
+        .listen((snapshot) {
       if (!mounted) return;
       final data = snapshot.data();
       final habilitadas = data?['expensasHabilitadas'] ?? true;
@@ -42,6 +43,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         setState(() => _expensasHabilitadas = habilitadas);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _condoSub?.cancel();
+    super.dispose();
   }
 
   @override

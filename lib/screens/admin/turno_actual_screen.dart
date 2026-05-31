@@ -982,7 +982,7 @@ class _TurnoActualScreenState extends State<TurnoActualScreen> {
     );
   }
 
-  void _finalizarTurno(TurnoModel turno) async {
+  Future<void> _finalizarTurno(TurnoModel turno) async {
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -1021,7 +1021,7 @@ class _TurnoActualScreenState extends State<TurnoActualScreen> {
     }
   }
 
-  void _iniciarTurno(String tipoTurno) async {
+  Future<void> _iniciarTurno(String tipoTurno) async {
     // Capturar referencia antes de operaciones async
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     
@@ -1169,7 +1169,7 @@ class _TurnoActualScreenState extends State<TurnoActualScreen> {
             final nuevoTurno = TurnoModel(
               id: '',
               guardiaId: guardiaSeleccionado.id,
-              condominioId: 'default', // TODO: Obtener condominio actual
+              condominioId: widget.condominioId,
               fechaInicio: DateTime.now(),
               fechaFin: DateTime.now().add(const Duration(hours: 12)), // Turno de 12 horas
               estado: 'activo',

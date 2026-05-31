@@ -27,14 +27,14 @@ class GuardiaModel {
   factory GuardiaModel.fromFirestore(Map<String, dynamic> data, String id) {
     return GuardiaModel(
       id: id,
-      nombre: data['nombre'] ?? '',
-      apellido: data['apellido'] ?? '',
-      email: data['email'] ?? '',
-      telefono: data['telefono'] ?? '',
-      condominioId: data['condominioId'] ?? '',
-      turno: data['turno'] ?? 'diurno',
-      tipoPerfil: data['tipoPerfil'] ?? 'recepcion',
-      activo: data['activo'] ?? true,
+      nombre: (data['nombre'] as String?) ?? '',
+      apellido: (data['apellido'] as String?) ?? '',
+      email: (data['email'] as String?) ?? '',
+      telefono: (data['telefono'] as String?) ?? '',
+      condominioId: (data['condominioId'] as String?) ?? '',
+      turno: (data['turno'] as String?) ?? 'diurno',
+      tipoPerfil: (data['tipoPerfil'] as String?) ?? 'recepcion',
+      activo: (data['activo'] as bool?) ?? true,
       fechaIngreso: data['fechaIngreso']?.toDate() ?? DateTime.now(),
     );
   }
