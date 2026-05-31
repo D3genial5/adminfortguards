@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/configuracion_model.dart';
 import '../../services/configuracion_service.dart';
+import 'soporte_screen.dart';
+import 'terminos_screen.dart';
 
 class ConfiguracionScreen extends StatefulWidget {
   const ConfiguracionScreen({super.key});
@@ -322,16 +324,22 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
         _buildDivider(),
         _buildActionItem(
           icono: Icons.help_outline_rounded,
-          titulo: 'Ayuda',
-          subtitulo: 'Centro de ayuda y soporte',
-          onTap: _mostrarAyuda,
+          titulo: 'Ayuda y Soporte',
+          subtitulo: 'Preguntas frecuentes y contacto',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SoporteScreen()),
+          ),
         ),
         _buildDivider(),
         _buildActionItem(
           icono: Icons.privacy_tip_outlined,
-          titulo: 'Política de Privacidad',
-          subtitulo: 'Términos y condiciones',
-          onTap: _mostrarPoliticaPrivacidad,
+          titulo: 'Términos y Condiciones',
+          subtitulo: 'Política de privacidad y uso',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TerminosScreen()),
+          ),
         ),
       ],
     );
@@ -815,7 +823,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
     }
   }
 
-  void _mostrarDialogoAcercaDe() async {
+  Future<void> _mostrarDialogoAcercaDe() async {
     final infoApp = await ConfiguracionService.obtenerInfoApp();
     
     if (mounted) {
@@ -848,89 +856,6 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
         ),
       );
     }
-  }
-
-  void _mostrarAyuda() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Centro de Ayuda'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Preguntas Frecuentes:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text('• ¿Cómo crear un nuevo condominio?'),
-            Text('• ¿Cómo agregar guardias de seguridad?'),
-            Text('• ¿Cómo gestionar las credenciales?'),
-            Text('• ¿Cómo crear backup de datos?'),
-            SizedBox(height: 16),
-            Text(
-              'Para soporte técnico, contacte al administrador del sistema.',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _mostrarPoliticaPrivacidad() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Política de Privacidad'),
-        content: const SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Términos y Condiciones de Uso',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 16),
-              Text(
-                '1. Los datos almacenados en esta aplicación son confidenciales y están protegidos.',
-              ),
-              SizedBox(height: 8),
-              Text(
-                '2. El acceso a la información está restringido a usuarios autorizados.',
-              ),
-              SizedBox(height: 8),
-              Text(
-                '3. Se requiere mantener la confidencialidad de las credenciales de acceso.',
-              ),
-              SizedBox(height: 8),
-              Text(
-                '4. El uso indebido de la aplicación puede resultar en la suspensión del acceso.',
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Para más información, contacte al administrador del sistema.',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Entendido'),
-          ),
-        ],
-      ),
-    );
   }
 
   String _formatearFecha(DateTime fecha) {

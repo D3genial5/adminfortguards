@@ -1,3 +1,7 @@
+# Sensitive files
+serviceAccount.json
+key.properties
+
 # Miscellaneous
 *.class
 *.log

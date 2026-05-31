@@ -15,6 +15,7 @@ import 'reservas_screen.dart';
 import 'gestion_qr_pago_screen.dart';
 import 'historial_ingresos_screen.dart';
 import 'alertas_admin_screen.dart';
+import 'soporte_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   final String condominioId;
@@ -26,6 +27,22 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String get condominioId => widget.condominioId;
+  bool _expensasHabilitadas = true;
+  late final Stream<DocumentSnapshot<Map<String, dynamic>>> _condominioStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _condominioStream = AdminFirestoreService.streamCondominio(condominioId);
+    _condominioStream.listen((snapshot) {
+      if (!mounted) return;
+      final data = snapshot.data();
+      final habilitadas = data?['expensasHabilitadas'] ?? true;
+      if (habilitadas != _expensasHabilitadas) {
+        setState(() => _expensasHabilitadas = habilitadas);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,16 +79,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search_rounded),
-            onPressed: () => _mostrarBusqueda(context),
-            tooltip: 'Buscar casa',
+          Container(
+            margin: const EdgeInsets.only(right: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: IconButton(
+              icon: Icon(Icons.search_rounded, color: Theme.of(context).colorScheme.primary),
+              onPressed: () => _mostrarBusqueda(context),
+              tooltip: 'Buscar casa',
+            ),
           ),
         ],
       ),
       drawer: _buildDrawer(context, isTablet),
       body: FutureBuilder(
-        future: AdminFirestoreService.seedIfEmpty(condominioId),
+        future: AdminFirestoreService.ensureCondominioExists(condominioId),
         builder: (context, snapshotSeed) {
           if (snapshotSeed.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -167,6 +198,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                       ),
                                     ),
                                     const SizedBox(height: 10),
+                                    if (_expensasHabilitadas)
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                       decoration: BoxDecoration(
@@ -196,6 +228,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                               color: isPagada 
                                                   ? const Color(0xFF10B981)
                                                   : const Color(0xFFF59E0B),
+                                              letterSpacing: 0.1,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  if (!_expensasHabilitadas)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.block_rounded, size: 16, color: Colors.grey.shade500),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            'Expensas inhabilitadas',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.grey.shade500,
                                               letterSpacing: 0.1,
                                             ),
                                           ),
@@ -260,16 +316,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                       ],
                                     ),
                                   ),
-                                  const PopupMenuItem(
-                                    value: 'expensa',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.payment_outlined, size: 20, color: Color(0xFF6B7280)),
-                                        SizedBox(width: 12),
-                                        Text('Actualizar expensa'),
-                                      ],
+                                  if (_expensasHabilitadas)
+                                    const PopupMenuItem(
+                                      value: 'expensa',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.payment_outlined, size: 20, color: Color(0xFF6B7280)),
+                                          SizedBox(width: 12),
+                                          Text('Actualizar expensa'),
+                                        ],
+                                      ),
                                     ),
-                                  ),
                                   const PopupMenuItem(
                                     value: 'notificacion',
                                     child: Row(
@@ -423,37 +480,39 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   isTablet: isTablet,
                 ),
                 const SizedBox(height: 4),
-                _buildDrawerItem(
-                  context,
-                  icon: Icons.analytics_rounded,
-                  title: 'Reportes de Expensas',
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ReportesExpensasScreen(condominioId: condominioId),
-                      ),
-                    );
-                  },
-                  isTablet: isTablet,
-                ),
-                const SizedBox(height: 4),
-                _buildDrawerItem(
-                  context,
-                  icon: Icons.qr_code_2,
-                  title: 'QR de Pago',
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => GestionQrPagoScreen(condominioId: condominioId),
-                      ),
-                    );
-                  },
-                  isTablet: isTablet,
-                ),
+                if (_expensasHabilitadas) ...[
+                  _buildDrawerItem(
+                    context,
+                    icon: Icons.analytics_rounded,
+                    title: 'Reportes de Expensas',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ReportesExpensasScreen(condominioId: condominioId),
+                        ),
+                      );
+                    },
+                    isTablet: isTablet,
+                  ),
+                  const SizedBox(height: 4),
+                  _buildDrawerItem(
+                    context,
+                    icon: Icons.qr_code_2,
+                    title: 'QR de Pago',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => GestionQrPagoScreen(condominioId: condominioId),
+                        ),
+                      );
+                    },
+                    isTablet: isTablet,
+                  ),
+                ],
                 const SizedBox(height: 4),
                 _buildDrawerItem(
                   context,
@@ -511,6 +570,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                 ),
                 SizedBox(height: isTablet ? 12 : 8),
+                _buildExpensasToggle(isTablet),
+                SizedBox(height: isTablet ? 12 : 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Divider(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                    thickness: 1,
+                  ),
+                ),
+                SizedBox(height: isTablet ? 12 : 8),
                 _buildDrawerItem(
                   context,
                   icon: Icons.settings_rounded,
@@ -521,6 +590,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       context,
                       MaterialPageRoute(
                         builder: (_) => const ConfiguracionScreen(),
+                      ),
+                    );
+                  },
+                  isTablet: isTablet,
+                ),
+                const SizedBox(height: 4),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.help_center_rounded,
+                  title: 'Ayuda y Soporte',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SoporteScreen(),
                       ),
                     );
                   },
@@ -681,6 +766,86 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildExpensasToggle(bool isTablet) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: isTablet ? 16 : 12),
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: isTablet ? 16 : 14,
+          vertical: isTablet ? 10 : 8,
+        ),
+        decoration: BoxDecoration(
+          color: _expensasHabilitadas
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.06)
+              : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _expensasHabilitadas
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)
+                : Colors.grey.shade300,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: isTablet ? 44 : 40,
+              height: isTablet ? 44 : 40,
+              decoration: BoxDecoration(
+                color: _expensasHabilitadas
+                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                    : Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                _expensasHabilitadas
+                    ? Icons.account_balance_wallet_rounded
+                    : Icons.money_off_rounded,
+                color: _expensasHabilitadas
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.grey.shade500,
+                size: isTablet ? 22 : 20,
+              ),
+            ),
+            SizedBox(width: isTablet ? 16 : 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Expensas',
+                    style: TextStyle(
+                      color: const Color(0xFF37474F),
+                      fontSize: isTablet ? 15 : 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _expensasHabilitadas ? 'Habilitadas' : 'Inhabilitadas',
+                    style: TextStyle(
+                      color: _expensasHabilitadas ? Colors.green : Colors.grey.shade500,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Switch.adaptive(
+              value: _expensasHabilitadas,
+              onChanged: (value) {
+                AdminFirestoreService.setExpensasHabilitadas(
+                  condominioId: condominioId,
+                  habilitadas: value,
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
