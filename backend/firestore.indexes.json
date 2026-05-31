@@ -1,0 +1,229 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "qr_invitados",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "condominio",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "casaNumero",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estado",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "qr_invitados",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "condominio",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "casaNumero",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "creadoEn",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "qr_invitados",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "expira",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "qr_invitados",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "usosRestantes",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "logs_accesos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "condominio",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "casaNumero",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fecha",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "logs_accesos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "condominio",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fecha",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "logs_accesos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "guardiaId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fecha",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "access_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "condominio",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "casaNumero",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estado",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "access_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ci",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fecha",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "avisos_condominio",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "condominio",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fecha",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "expensas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "condominio",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "casaNumero",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estado",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "expensas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "mes",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "`año`",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "reservas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "condominio",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fecha",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "emergencias",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "condominio",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fecha",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

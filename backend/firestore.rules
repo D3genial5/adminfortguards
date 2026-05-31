@@ -1,0 +1,420 @@
+rules_version = '2';
+
+// =============================================================================
+// FortGuards - Firestore Security Rules
+// =============================================================================
+// Modelo de auth:
+//   - Super Admin  : Firebase Auth + custom claim {role: 'superadmin'}
+//   - Admin        : Firebase Auth + custom claim {role: 'admin', condominio}
+//   - Guardia      : Firebase Auth + custom claim {role: 'guardia', condominio}
+//   - Propietario  : Firebase Auth (Custom Token desde Cloud Function)
+//                    + custom claim {role: 'propietario', condominio, casaId}
+//   - Visitante    : Firebase Anonymous Auth (sin role). Solo crea/lee sus propios docs.
+//
+// Los custom tokens los emite la Cloud Function `issueAuthToken` luego de validar
+// la password del propietario contra Firestore (server-side).
+//
+// qrSecret y otros secretos viven en /condominios_secrets/{id}: NEGADOS al cliente,
+// accesibles solo vía Admin SDK desde Cloud Functions.
+// =============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------
+    function isAuth()   { return request.auth != null; }
+    function uid()      { return isAuth() ? request.auth.uid : ''; }
+    function token()    { return isAuth() ? request.auth.token : {}; }
+    function role()     { return isAuth() && 'role' in request.auth.token ? request.auth.token.role : ''; }
+    function condo()    { return isAuth() && 'condominio' in request.auth.token ? request.auth.token.condominio : ''; }
+    function casaIdT()  { return isAuth() && 'casaId' in request.auth.token ? request.auth.token.casaId : ''; }
+
+    function isSuper()       { return role() == 'superadmin'; }
+    function isAdmin()       { return role() == 'admin'; }
+    function isGuardia()     { return role() == 'guardia'; }
+    function isPropietario() { return role() == 'propietario'; }
+    function isVisitante()   { return isAuth() && role() == ''; }   // anónimo o sin claim
+
+    function isAdminOf(c)       { return isAdmin()   && (condo() == c || condo() == 'Todos'); }
+    function isGuardiaOf(c)     { return isGuardia() && condo() == c; }
+    function isPropietarioOf(c, casa) {
+      return isPropietario() && condo() == c && casaIdT() == casa;
+    }
+    function isStaffOf(c)       { return isSuper() || isAdminOf(c) || isGuardiaOf(c); }
+
+    // Helpers de diff (para limitar qué campos se pueden cambiar)
+    function changedKeys()    { return request.resource.data.diff(resource.data).affectedKeys(); }
+    function onlyChanges(ks)  { return changedKeys().hasOnly(ks); }
+    function untouched(ks)    { return !changedKeys().hasAny(ks); }
+
+    function newData() { return request.resource.data; }
+
+    // ==================================================================
+    // condominios_secrets — qrSecret, HMAC keys
+    // ==================================================================
+    // Solo Cloud Functions con Admin SDK. NUNCA cliente.
+    match /condominios_secrets/{condoId} {
+      allow read, write: if false;
+    }
+
+    // ==================================================================
+    // condominios
+    // ==================================================================
+    match /condominios/{condoId} {
+      // El doc del condo no tiene secretos (qrSecret vive en
+      // condominios_secrets/). Cualquier autenticado puede ver la lista para
+      // seleccionar al solicitar acceso.
+      allow read   : if isAuth();
+      allow create : if isSuper();
+      allow update : if isAdminOf(condoId) || isSuper();
+      allow delete : if isSuper();
+
+      // -------------------- casas ------------------------------------
+      match /casas/{casaId} {
+        // Read: staff del condo, propietario del mismo condo (cualquier casa,
+        // necesario para listar el dropdown en solicitud de ingreso / seleccion
+        // de casa), o visitante autenticado (anon).
+        //
+        // ⚠️ TRADE-OFF: el doc incluye `passwordHash`. Está protegido por
+        // PBKDF2-SHA512 210k iter, pero idealmente debería leerse vía Cloud
+        // Function `listCasas(condo)` que devuelva sólo {numero, propietario}.
+        allow read   : if isStaffOf(condoId)
+                        || (isPropietario() && condo() == condoId)
+                        || isVisitante();
+        allow create : if isAdminOf(condoId) || isSuper();
+        allow delete : if isAdminOf(condoId) || isSuper();
+
+        // Update: admin todo. Propietario puede tocar SU código de casa, los
+        // contadores asociados y el fcmToken. Campos sensibles (passwordHash,
+        // passwordSalt, propietario, residentes, numero) permanecen protegidos.
+        allow update : if isAdminOf(condoId) || isSuper()
+                        || (isPropietarioOf(condoId, casaId)
+                            && onlyChanges([
+                                  'codigoCasa', 'codigoExpira', 'codigoUsos',
+                                  'usosPreferidos', 'duracionHoras',
+                                  'ultimaRegeneracion',
+                                  'regeneracionAutomatica', 'regeneracionPorTrigger',
+                                  'ultimoVisitanteNombre', 'ultimoVisitanteCI',
+                                  'ultimoVisitanteFotoFrente', 'ultimoVisitanteFotoReverso',
+                                  'fcmToken', 'fcmTokenUpdated'
+                                ]));
+
+        match /pagos/{pagoId} {
+          allow read  : if isStaffOf(condoId) || isPropietarioOf(condoId, casaId);
+          allow write : if isAdminOf(condoId);
+        }
+      }
+
+      // -------------------- areas_comunes ----------------------------
+      match /areas_comunes/{areaId} {
+        allow read  : if isStaffOf(condoId)
+                       || (isPropietario() && condo() == condoId);
+        allow write : if isAdminOf(condoId) || isSuper();
+      }
+
+      // -------------------- reservas (subcolección) -------------------
+      // El cliente usa condominios/{c}/reservas/{r} además de la
+      // colección top-level /reservas. Aquí cubrimos la subcolección.
+      match /reservas/{reservaId} {
+        allow read   : if isStaffOf(condoId)
+                        || (isPropietario() && condo() == condoId);
+        allow create : if isAuth() && (
+                          isStaffOf(condoId)
+                          || (isPropietario() && condo() == condoId
+                              && newData().creadoPor == uid())
+                        );
+        allow update : if isAdminOf(condoId)
+                        || (isPropietario() && condo() == condoId
+                            && resource.data.creadoPor == uid());
+        allow delete : if isAdminOf(condoId)
+                        || (isPropietario() && condo() == condoId
+                            && resource.data.creadoPor == uid());
+      }
+    }
+
+    // ==================================================================
+    // administradores
+    // ==================================================================
+    match /administradores/{adminId} {
+      allow read   : if uid() == adminId || isSuper();
+      allow create : if isSuper();
+      allow delete : if isSuper();
+      // El propio admin actualiza su perfil (sin tocar password/role/condominio)
+      allow update : if (uid() == adminId
+                          && untouched(['passwordHash','password','condominio','role']))
+                      || isSuper();
+    }
+
+    // ==================================================================
+    // guardias_auth
+    // ==================================================================
+    match /guardias_auth/{guardiaId} {
+      allow read   : if uid() == guardiaId
+                      || isSuper()
+                      || (resource != null && isAdminOf(resource.data.condominio));
+      allow create : if isSuper()
+                      || (request.resource != null && isAdminOf(newData().condominio));
+      allow update : if isSuper()
+                      || (resource != null && isAdminOf(resource.data.condominio));
+      allow delete : if isSuper()
+                      || (resource != null && isAdminOf(resource.data.condominio));
+    }
+
+    // ==================================================================
+    // guardias (datos operativos)
+    // ==================================================================
+    match /guardias/{guardiaId} {
+      allow read   : if isAuth();
+      allow create, update, delete : if isSuper()
+                      || (request.resource != null && isAdminOf(newData().condominio))
+                      || (resource != null && isAdminOf(resource.data.condominio))
+                      || (isGuardia() && uid() == guardiaId
+                          && resource != null
+                          && onlyChanges(['fcmToken','fcmTokenUpdated','ultimoAcceso']));
+    }
+
+    // ==================================================================
+    // access_requests — solicitudes de acceso
+    // ==================================================================
+    match /access_requests/{requestId} {
+      // Visitante (o cualquier autenticado) crea su solicitud
+      allow create : if isAuth()
+                      && newData().creatorUid == uid()
+                      && newData().condominio is string
+                      && newData().casaNumero != null;
+
+      // Read: cualquier autenticado puede consultar (el dato — nombre, CI,
+      // casa solicitada — no es secreto). El control real está en update:
+      // sólo el propietario o staff pueden aprobar/decidir el estado.
+      allow read   : if isAuth();
+
+      // Update: propietario aprueba/rechaza, guardia marca entrada, visitante cancela
+      allow update : if isAuth() && (
+                          // Propietario de la casa: aprueba/rechaza + setea QR
+                          (isPropietario() && condo() == resource.data.condominio
+                              && casaIdT() == string(resource.data.casaNumero)
+                              && onlyChanges(['estado','fechaAprobacion','codigoQr',
+                                              'tipoAcceso','usosRestantes','codigoUsos',
+                                              'fechaExpiracion','duracionValor','duracionUnidad',
+                                              'qrPayload','qrSignature']))
+                          // Guardia: marca entrada verificada y decrementa usos
+                          || (isGuardiaOf(resource.data.condominio)
+                              && onlyChanges(['entradaVerificada','fechaEntrada',
+                                              'usosRestantes','salidaVerificada','fechaSalida']))
+                          // Admin: total dentro de su condominio
+                          || isAdminOf(resource.data.condominio)
+                          // Visitante creador: solo cancelar
+                          || (resource.data.creatorUid == uid()
+                              && onlyChanges(['cancelado','fechaCancelacion']))
+                        );
+
+      allow delete : if isAdminOf(resource.data.condominio) || isSuper();
+    }
+
+    // ==================================================================
+    // logs_accesos / access_logs (alias)
+    // ==================================================================
+    match /logs_accesos/{logId} {
+      allow read   : if isStaffOf(resource.data.condominio);
+      allow create : if isAuth() && isStaffOf(newData().condominio);
+      allow update, delete : if false; // inmutables
+    }
+
+    match /access_logs/{logId} {
+      allow read   : if isStaffOf(resource.data.condominio);
+      allow create : if isAuth() && isStaffOf(newData().condominio);
+      allow update, delete : if false;
+    }
+
+    // ==================================================================
+    // registros_ingreso
+    // ==================================================================
+    match /registros_ingreso/{regId} {
+      allow read   : if isStaffOf(resource.data.condominio)
+                      || (isPropietario() && condo() == resource.data.condominio
+                          && casaIdT() == string(resource.data.casaNumero));
+      allow create : if isAuth() && isStaffOf(newData().condominio);
+      allow update : if isStaffOf(resource.data.condominio);
+      allow delete : if isAdminOf(resource.data.condominio);
+    }
+
+    // ==================================================================
+    // visitantes
+    // ==================================================================
+    match /visitantes/{visitanteId} {
+      // Visitor crea su propio doc (anónimo o propietario invitando).
+      // El docId suele ser el CI; lo importante es marcar creatorUid.
+      allow create : if isAuth() && newData().creatorUid == uid();
+
+      // Read: el propio visitante (por uid) o cualquier staff de un condo
+      // (los visitantes son referenciados por el guard al escanear QR de otro
+      // condo, por eso no se exige condominio específico en el doc visitante).
+      allow read   : if isAuth() && (
+                          (resource.data.creatorUid == uid())
+                          || role() in ['superadmin','admin','guardia']
+                        );
+
+      // Update: el propio visitante (ej. reemplazo de fotos / cambio de placa)
+      // o staff cualquiera (ej. admin actualizando estado).
+      allow update : if isAuth() && (
+                          (resource.data.creatorUid == uid()
+                            && untouched(['creatorUid']))
+                          || role() in ['superadmin','admin']
+                        );
+
+      allow delete : if isSuper();
+    }
+
+    // ==================================================================
+    // notificaciones
+    // ==================================================================
+    match /notificaciones/{notifId} {
+      allow create : if isAuth() && isStaffOf(newData().condominio);
+
+      allow read   : if isAuth() && (
+                          isStaffOf(resource.data.condominio)
+                          || (isPropietario() && condo() == resource.data.condominio
+                              && (
+                                // get() devuelve default si el campo no existe,
+                                // así evitamos "Property is undefined" cuando
+                                // alguna notificación no tiene tipo/casaNumero.
+                                resource.data.get('tipo', '') == 'condominio'
+                                || resource.data.get('casaNumero', -1) == 0
+                                || resource.data.get('casaNumero', -1) == -1
+                                || string(resource.data.get('casaNumero', -1)) == casaIdT()
+                              ))
+                        );
+
+      // Propietario solo marca como visto. Admin todo.
+      allow update : if isAdminOf(resource.data.condominio)
+                      || (isPropietario() && condo() == resource.data.condominio
+                          && onlyChanges(['visto','vistoAt','leidoPor']));
+
+      allow delete : if isAdminOf(resource.data.condominio);
+    }
+
+    // ==================================================================
+    // avisos_condominio
+    // ==================================================================
+    match /avisos_condominio/{avisoId} {
+      allow read   : if isStaffOf(resource.data.condominio)
+                      || (isPropietario() && condo() == resource.data.condominio);
+      allow create : if isAdminOf(newData().condominio);
+      allow update, delete : if isAdminOf(resource.data.condominio);
+    }
+
+    // ==================================================================
+    // expensas
+    // ==================================================================
+    match /expensas/{expensaId} {
+      allow read   : if isStaffOf(resource.data.condominioId)
+                      || (isPropietario() && condo() == resource.data.condominioId
+                          && string(resource.data.casaNumero) == casaIdT());
+      allow create : if isAdminOf(newData().condominioId);
+      allow update : if isAdminOf(resource.data.condominioId);
+      allow delete : if isSuper();
+    }
+
+    // ==================================================================
+    // configuraciones (preferencias por usuario)
+    // ==================================================================
+    match /configuraciones/{userId} {
+      allow read, write : if uid() == userId;
+    }
+
+    // ==================================================================
+    // reservas
+    // ==================================================================
+    match /reservas/{reservaId} {
+      allow read   : if isStaffOf(resource.data.condominio)
+                      || (isPropietario() && condo() == resource.data.condominio);
+
+      allow create : if isAuth() && (
+                          isStaffOf(newData().condominio)
+                          || (isPropietario() && condo() == newData().condominio
+                              && string(newData().casaNumero) == casaIdT()
+                              && newData().creadoPor == uid())
+                        );
+
+      allow update : if isAdminOf(resource.data.condominio)
+                      || (isPropietario() && condo() == resource.data.condominio
+                          && resource.data.creadoPor == uid());
+
+      allow delete : if isAdminOf(resource.data.condominio)
+                      || (isPropietario() && condo() == resource.data.condominio
+                          && resource.data.creadoPor == uid());
+    }
+
+    // ==================================================================
+    // sesiones / sesiones_activas — vinculadas a auth.uid
+    // ==================================================================
+    match /sesiones/{sessionId} {
+      allow read   : if isAuth() && resource.data.uid == uid();
+      allow create : if isAuth() && newData().uid == uid();
+      allow update : if isAuth() && resource.data.uid == uid()
+                      && newData().uid == uid();
+      allow delete : if isAuth() && resource.data.uid == uid();
+    }
+    match /sesiones_activas/{sessionId} {
+      allow read   : if isAuth() && resource.data.uid == uid();
+      allow create : if isAuth() && newData().uid == uid();
+      allow update : if isAuth() && resource.data.uid == uid()
+                      && newData().uid == uid();
+      allow delete : if isAuth() && resource.data.uid == uid();
+    }
+
+    // ==================================================================
+    // qr_invitados
+    // ==================================================================
+    match /qr_invitados/{qrId} {
+      allow create : if isPropietarioOf(newData().condominio, string(newData().casaNumero))
+                      || isAdminOf(newData().condominio);
+
+      allow read   : if isStaffOf(resource.data.condominio)
+                      || isPropietarioOf(resource.data.condominio, string(resource.data.casaNumero))
+                      // visitante con el QR en mano puede verificar su propio QR (filtrado por código)
+                      || (isVisitante() && resource.data.codigo == qrId);
+
+      allow update : if isStaffOf(resource.data.condominio)
+                      || isPropietarioOf(resource.data.condominio, string(resource.data.casaNumero));
+
+      allow delete : if isAdminOf(resource.data.condominio)
+                      || isPropietarioOf(resource.data.condominio, string(resource.data.casaNumero));
+    }
+
+    // ==================================================================
+    // turnos
+    // ==================================================================
+    match /turnos/{turnoId} {
+      allow read   : if isStaffOf(resource.data.condominio);
+      allow create : if isAuth() && isGuardiaOf(newData().condominio)
+                      && newData().guardiaUid == uid();
+      allow update : if isStaffOf(resource.data.condominio)
+                      && (isAdmin() || resource.data.guardiaUid == uid());
+      allow delete : if isAdminOf(resource.data.condominio);
+    }
+
+    // ==================================================================
+    // emergencias / alertas
+    // ==================================================================
+    match /emergencias/{emerId} {
+      allow read   : if isStaffOf(resource.data.condominio)
+                      || (isPropietario() && condo() == resource.data.condominio);
+      allow create : if isAuth() && newData().creatorUid == uid();
+      allow update : if isStaffOf(resource.data.condominio);
+      allow delete : if isAdminOf(resource.data.condominio);
+    }
+
+    // ==================================================================
+    // config (flags globales — config/migracion etc.)
+    // ==================================================================
+    match /config/{configId} {
+      allow read  : if isAuth();
+      allow write : if isSuper();
+    }
+
+    // Default deny — Firestore deniega por defecto, esto es solo recordatorio.
+  }
+}

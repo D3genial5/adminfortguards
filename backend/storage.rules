@@ -1,0 +1,67 @@
+rules_version = '2';
+
+// =============================================================================
+// FortGuards - Cloud Storage Rules
+// =============================================================================
+// Auth model copiado de firestore.rules — usa Custom Claims.
+// =============================================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuth() { return request.auth != null; }
+    function role()   { return isAuth() && 'role' in request.auth.token ? request.auth.token.role : ''; }
+    function condo()  { return isAuth() && 'condominio' in request.auth.token ? request.auth.token.condominio : ''; }
+    function isSuper(){ return role() == 'superadmin'; }
+    function isAdminOf(c) { return role() == 'admin' && (condo() == c || condo() == 'Todos'); }
+    function isGuardiaOf(c) { return role() == 'guardia' && condo() == c; }
+    function isStaffOf(c)   { return isSuper() || isAdminOf(c) || isGuardiaOf(c); }
+
+    // Fotos de carnets de visitantes — cualquier autenticado puede subir/leer.
+    // Tamaño máx 10 MB. Tampering en el path se mitiga vía Firestore creatorUid.
+    //
+    // Soporta dos layouts:
+    //   visitantes/{ci}_{tipo}.jpg            (flat, legacy)
+    //   visitantes/{ci}/{file}                (nested, recomendado nuevo)
+    match /visitantes/{file} {
+      allow read: if isAuth();
+      allow write: if isAuth() && request.resource.size < 10 * 1024 * 1024;
+      allow delete: if role() in ['superadmin','admin'];
+    }
+    match /visitantes/{ci}/{file} {
+      allow read: if isAuth();
+      allow write: if isAuth() && request.resource.size < 10 * 1024 * 1024;
+      allow delete: if role() in ['superadmin','admin'];
+    }
+
+    // Avatars / fotos por casa
+    match /condominios/{condoId}/casas/{casaId}/{file} {
+      allow read, write: if isStaffOf(condoId);
+      allow read: if role() == 'propietario'
+                    && condo() == condoId
+                    && 'casaId' in request.auth.token
+                    && request.auth.token.casaId == casaId;
+    }
+
+    // Logos / branding por condominio
+    match /condominios/{condoId}/branding/{file} {
+      allow read: if isAuth();
+      allow write: if isAdminOf(condoId) || isSuper();
+    }
+
+    // Comprobantes de expensas
+    match /expensas/{condoId}/{casaId}/{file} {
+      allow read: if isStaffOf(condoId)
+                    || (role() == 'propietario' && condo() == condoId);
+      allow write: if isStaffOf(condoId)
+                    || (role() == 'propietario' && condo() == condoId
+                        && request.auth.token.casaId == casaId
+                        && request.resource.size < 5 * 1024 * 1024);
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

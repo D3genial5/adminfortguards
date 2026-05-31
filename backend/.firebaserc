@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "fortguard-9bba5",
+    "prod": "fortguard-9bba5"
+  },
+  "targets": {},
+  "etags": {}
+}

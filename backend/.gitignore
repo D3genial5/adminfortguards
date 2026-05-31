@@ -1,0 +1,19 @@
+# Dependencias y build de Cloud Functions
+functions/node_modules/
+functions/lib/
+functions/.tsbuildinfo
+
+# Firebase
+.firebase/
+*.log
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Secretos / credenciales (nunca commitear)
+serviceAccount.json
+*.jks
+*.keystore
+key.properties
+.env
+.env.*
