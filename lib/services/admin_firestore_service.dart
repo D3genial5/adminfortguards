@@ -17,6 +17,40 @@ class AdminFirestoreService {
     return await _db.collection('condominios').doc(condominioId).collection('casas').get();
   }
 
+  /// Stream del documento del condominio (configuración, flags, etc.)
+  static Stream<DocumentSnapshot<Map<String, dynamic>>> streamCondominio(
+      String condominioId) {
+    return _db.collection('condominios').doc(condominioId).snapshots();
+  }
+
+  /// Garantiza que el documento del condominio exista; lo crea con valores por
+  /// defecto si falta. Devuelve el documento resultante.
+  static Future<DocumentSnapshot<Map<String, dynamic>>> ensureCondominioExists(
+      String condominioId) async {
+    final ref = _db.collection('condominios').doc(condominioId);
+    final snap = await ref.get();
+    if (!snap.exists) {
+      await ref.set({
+        'nombre': condominioId,
+        'expensasHabilitadas': true,
+        'creadoEn': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      return ref.get();
+    }
+    return snap;
+  }
+
+  /// Habilita o deshabilita la sección de expensas para el condominio.
+  static Future<void> setExpensasHabilitadas({
+    required String condominioId,
+    required bool habilitadas,
+  }) async {
+    await _db.collection('condominios').doc(condominioId).set(
+      {'expensasHabilitadas': habilitadas},
+      SetOptions(merge: true),
+    );
+  }
+
   /// Crea o actualiza una casa
   static Future<void> guardarCasa({
     required String condominioId,
