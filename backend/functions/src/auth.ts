@@ -103,7 +103,7 @@ async function clearRateLimit(key: string): Promise<void> {
 // loginPropietario — emite Custom Token
 // =============================================================================
 export const loginPropietario = onCall(
-  { region: "us-central1", maxInstances: 20 },
+  { region: "us-central1" },
   async (request) => {
     const { condominio, casaId, password } = request.data ?? {};
     if (
