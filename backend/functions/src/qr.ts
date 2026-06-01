@@ -64,7 +64,7 @@ function sha256Hex(s: string): string {
 // signQrPayload — firma QR de propietario o invitado
 // =============================================================================
 export const signQrPayload = onCall(
-  { region: "us-central1", maxInstances: 50 },
+  { region: "us-central1", maxInstances: 10 },
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "No autenticado");
     const claims = request.auth.token;
@@ -126,7 +126,7 @@ export const signQrPayload = onCall(
 // verifyQrPayload — usado por la app del guardia para validar el QR
 // =============================================================================
 export const verifyQrPayload = onCall(
-  { region: "us-central1", maxInstances: 100 },
+  { region: "us-central1", maxInstances: 10 },
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "No autenticado");
     const claims = request.auth.token;
