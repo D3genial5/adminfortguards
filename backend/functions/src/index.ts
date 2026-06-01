@@ -9,5 +9,3 @@ export * from "./auth";
 export * from "./qr";
 export * from "./notifications";
 export * from "./scheduled";
-
-console.log("✅ FortGuards Cloud Functions cargadas");
