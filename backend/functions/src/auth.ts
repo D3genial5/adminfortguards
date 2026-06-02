@@ -383,5 +383,37 @@ export const refreshMyClaims = onCall(
   },
 );
 
+// =============================================================================
+// resetAuthUserPassword — superadmin resetea la password de un usuario de
+// Firebase Auth (admin o guardia). Devuelve la nueva password temporal para
+// mostrarla UNA vez. Acepta {uid} o {email}.
+// =============================================================================
+export const resetAuthUserPassword = onCall(
+  { region: "us-central1" },
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "No autenticado");
+    if (request.auth.token.role !== "superadmin") {
+      throw new HttpsError("permission-denied", "Solo super admin");
+    }
+    const { uid, email } = request.data ?? {};
+    let targetUid: string | undefined =
+      typeof uid === "string" && uid ? uid : undefined;
+    if (!targetUid && typeof email === "string" && email) {
+      try {
+        const u = await auth().getUserByEmail(email);
+        targetUid = u.uid;
+      } catch {
+        throw new HttpsError("not-found", "Usuario no encontrado por email");
+      }
+    }
+    if (!targetUid) {
+      throw new HttpsError("invalid-argument", "uid o email requerido");
+    }
+    const newPwd = generateTempPassword(10);
+    await auth().updateUser(targetUid, { password: newPwd });
+    return { newPassword: newPwd };
+  },
+);
+
 // Re-exportar utilidades para que QR las use
 export const _pbkdf2 = { pbkdf2Hash, newSalt, encodePhc, decodePhc, safeEqual };
