@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../services/condominio_service.dart';
 import '../../models/condominio_model.dart';
+import 'admin_dashboard_screen.dart';
 
 class ListaCondominiosScreen extends StatefulWidget {
   const ListaCondominiosScreen({super.key});
@@ -159,6 +160,21 @@ class _ListaCondominiosScreenState extends State<ListaCondominiosScreen> {
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.settings_rounded,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AdminDashboardScreen(
+                              condominioId: condominio.id,
+                            ),
+                          ),
+                        ),
+                        tooltip: 'Administrar condominio',
                       ),
                       IconButton(
                         icon: Icon(

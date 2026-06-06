@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:go_router/go_router.dart';
 import '../../services/propietario_service.dart';
 
 /// Centro de gestión de credenciales (v2).
@@ -30,6 +31,11 @@ class _VerCredencialesScreenState extends State<VerCredencialesScreen> {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () =>
+                Navigator.canPop(context) ? Navigator.pop(context) : context.go('/lista'),
+          ),
           title: const Text('Gestión de credenciales'),
           bottom: const TabBar(
             tabs: [
