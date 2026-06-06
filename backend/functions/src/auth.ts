@@ -415,5 +415,82 @@ export const resetAuthUserPassword = onCall(
   },
 );
 
+// =============================================================================
+// createStaffUser — crea un usuario de Firebase Auth (admin o guardia) vía
+// Admin SDK SIN afectar la sesión del que llama, escribe su doc (lo que dispara
+// syncAdminClaims/syncGuardiaClaims) y devuelve la password para mostrarla 1 vez.
+// =============================================================================
+export const createStaffUser = onCall(
+  { region: "us-central1" },
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "No autenticado");
+    const caller = request.auth.token;
+    const { email, password, role, condominio, nombre, guardiaId } =
+      request.data ?? {};
+
+    if (
+      typeof email !== "string" || !email ||
+      typeof role !== "string" ||
+      typeof condominio !== "string" || !condominio
+    ) {
+      throw new HttpsError("invalid-argument", "Datos inválidos");
+    }
+
+    if (role === "admin") {
+      if (caller.role !== "superadmin") {
+        throw new HttpsError("permission-denied", "Solo super admin crea admins");
+      }
+    } else if (role === "guardia") {
+      const ok =
+        caller.role === "superadmin" ||
+        (caller.role === "admin" &&
+          (caller.condominio === condominio || caller.condominio === "Todos"));
+      if (!ok) throw new HttpsError("permission-denied", "No autorizado");
+    } else {
+      throw new HttpsError("invalid-argument", "role inválido");
+    }
+
+    const pwd =
+      typeof password === "string" && password.length >= 6
+        ? password
+        : generateTempPassword(10);
+
+    // Crear o reusar el usuario de Firebase Auth (sin tocar la sesión del caller)
+    let uid: string;
+    try {
+      const existing = await auth().getUserByEmail(email);
+      uid = existing.uid;
+      await auth().updateUser(uid, { password: pwd });
+    } catch {
+      const created = await auth().createUser({
+        email,
+        password: pwd,
+        displayName: typeof nombre === "string" ? nombre : undefined,
+      });
+      uid = created.uid;
+    }
+
+    // Escribir el doc → dispara syncAdminClaims / syncGuardiaClaims (custom claims)
+    if (role === "admin") {
+      await db().collection("administradores").doc(uid).set(
+        { condominio, email, nombre: nombre ?? email },
+        { merge: true },
+      );
+    } else {
+      await db().collection("guardias_auth").doc(uid).set(
+        {
+          condominio,
+          email,
+          nombre: nombre ?? "",
+          guardiaId: guardiaId ?? "",
+        },
+        { merge: true },
+      );
+    }
+
+    return { uid, email, password: pwd };
+  },
+);
+
 // Re-exportar utilidades para que QR las use
 export const _pbkdf2 = { pbkdf2Hash, newSalt, encodePhc, decodePhc, safeEqual };

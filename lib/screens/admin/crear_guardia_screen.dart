@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../models/guardia_model.dart';
 import '../../services/guardia_service.dart';
 
@@ -571,6 +572,51 @@ class _CrearGuardiaScreenState extends State<CrearGuardiaScreen> {
     );
   }
 
+  Future<void> _mostrarCredenciales(String email, String password) async {
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Credenciales del guardia'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Guardalas y comunicáselas al guardia. La contraseña no se vuelve '
+              'a mostrar.',
+              style: TextStyle(fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            SelectableText('Email: $email'),
+            const SizedBox(height: 4),
+            SelectableText(
+              'Contraseña: $password',
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton.icon(
+            onPressed: () {
+              Clipboard.setData(
+                ClipboardData(text: 'Email: $email\nContraseña: $password'),
+              );
+            },
+            icon: const Icon(Icons.copy, size: 18),
+            label: const Text('Copiar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Listo'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _guardarGuardia() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -603,20 +649,26 @@ class _CrearGuardiaScreenState extends State<CrearGuardiaScreen> {
         fechaIngreso: _esEdicion ? widget.guardia!.fechaIngreso : DateTime.now(),
       );
 
+      String? passGenerada;
       if (_esEdicion) {
         await GuardiaService.actualizar(guardia.id, guardia);
       } else {
-        await GuardiaService.crear(guardia);
+        passGenerada = await GuardiaService.crear(guardia);
       }
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_esEdicion ? 'Guardia actualizado' : 'Guardia creado exitosamente'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (!_esEdicion && passGenerada != null && passGenerada.isNotEmpty) {
+        await _mostrarCredenciales(guardia.email.trim(), passGenerada);
+        if (!mounted) return;
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_esEdicion ? 'Guardia actualizado' : 'Guardia creado'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
 
       Navigator.pop(context, true); // true indica que se guardó exitosamente
 

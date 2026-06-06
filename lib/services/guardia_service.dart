@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import '../models/guardia_model.dart';
 import 'auth_service.dart';
 import '../core/app_log.dart';
@@ -7,30 +8,39 @@ class GuardiaService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String _collection = 'guardias';
 
-  // Crear nuevo guardia
-  static Future<String> crear(GuardiaModel guardia) async {
+  /// Crea un guardia. Registra su usuario de Firebase Auth vía Cloud Function
+  /// (Admin SDK, no rompe la sesión) usando el email del propio guardia, y
+  /// devuelve la contraseña temporal para mostrarla una sola vez (o null).
+  static Future<String?> crear(GuardiaModel guardia) async {
     try {
-      final docRef = await _firestore.collection(_collection).add(guardia.toFirestore());
-      
-      // Generar credenciales y registrar en Firebase Auth
-      final email = AuthService.generarEmailGuardia(guardia.nombre, guardia.apellido, guardia.condominioId);
-      final password = AuthService.generarPasswordSeguro(length: 12);
+      final docRef =
+          await _firestore.collection(_collection).add(guardia.toFirestore());
+
+      // Usar el email del guardia (el mismo con el que va a loguear). Fallback
+      // a uno generado si viniera vacío.
+      final email = guardia.email.trim().isNotEmpty
+          ? guardia.email.trim()
+          : AuthService.generarEmailGuardia(
+              guardia.nombre, guardia.apellido, guardia.condominioId);
+      if (guardia.email.trim().isEmpty) {
+        await docRef.update({'email': email});
+      }
 
       try {
-        await AuthService.registrarGuardia(
-          guardiaId: docRef.id,
-          email: email,
-          password: password,
-          nombre: guardia.nombre,
-          apellido: guardia.apellido,
-          condominioId: guardia.condominioId,
-        );
-        AppLog.log('Guardia registrado en Firebase Auth: $email');
+        final functions =
+            FirebaseFunctions.instanceFor(region: 'us-central1');
+        final res = await functions.httpsCallable('createStaffUser').call({
+          'email': email,
+          'role': 'guardia',
+          'condominio': guardia.condominioId,
+          'nombre': '${guardia.nombre} ${guardia.apellido}'.trim(),
+          'guardiaId': docRef.id,
+        });
+        return (res.data as Map)['password']?.toString();
       } catch (e) {
-        AppLog.log('Error al crear credenciales de guardia', error: e);
+        AppLog.log('Error al crear credenciales de guardia (CF)', error: e);
+        return null;
       }
-      
-      return docRef.id;
     } catch (e) {
       throw Exception('Error al crear guardia: $e');
     }

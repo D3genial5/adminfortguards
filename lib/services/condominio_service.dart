@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import '../models/condominio_model.dart';
 import 'auth_service.dart';
 import '../models/casa_model.dart';
@@ -40,17 +41,19 @@ class CondominioService {
     // Credenciales temporales para mostrar una sola vez
     final credencialesGeneradas = <Map<String, String>>[];
 
-    // 1. Registrar administrador con Firebase Auth
+    // 1. Registrar administrador vía Cloud Function (Admin SDK).
+    //    NO se crea en cliente para no romper la sesión del super-admin y para
+    //    setear los custom claims correctamente (trigger syncAdminClaims).
     final adminEmail = AuthService.generarEmailAdmin(condominio.nombre);
-    final adminPassword = AuthService.generarPasswordSeguro();
-
     try {
-      await AuthService.registrarAdmin(
-        email: adminEmail,
-        password: adminPassword,
-        nombre: 'Administrador de ${condominio.nombre}',
-        condominioId: condominio.nombre,
-      );
+      final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+      final res = await functions.httpsCallable('createStaffUser').call({
+        'email': adminEmail,
+        'role': 'admin',
+        'condominio': condominio.nombre,
+        'nombre': 'Administrador de ${condominio.nombre}',
+      });
+      final adminPassword = (res.data as Map)['password']?.toString() ?? '';
       credencialesGeneradas.add({
         'tipo': 'administrador',
         'email': adminEmail,

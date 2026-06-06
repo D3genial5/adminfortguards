@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/condominio_model.dart';
 import '../../models/casa_model.dart';
@@ -175,15 +176,12 @@ class _CrearCondominioScreenState extends State<CrearCondominioScreen> {
         casas: casas,
       );
 
-      await CondominioService.agregar(condominio);
-      
+      final resultado = await CondominioService.agregar(condominio);
+      final creds = resultado['credenciales'] ?? const <Map<String, String>>[];
+
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Condominio creado exitosamente'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      await _mostrarCredencialesCreadas(creds);
+      if (!mounted) return;
       context.go('/lista');
     } catch (e) {
       if (!mounted) return;
@@ -196,6 +194,60 @@ class _CrearCondominioScreenState extends State<CrearCondominioScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _mostrarCredencialesCreadas(
+      List<Map<String, String>> creds) async {
+    if (creds.isEmpty) return;
+    final buffer = StringBuffer();
+    for (final c in creds) {
+      if (c['tipo'] == 'administrador') {
+        buffer.writeln(
+            'ADMIN ${c['condominio']}: ${c['email']} / ${c['password']}');
+      } else {
+        buffer.writeln(
+            'Casa ${c['casa']} (${c['propietario']}): ${c['password']}');
+      }
+    }
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Credenciales generadas'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Guardalas: la contraseña del admin y de cada propietario se '
+                  'muestran una sola vez.',
+                  style: TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 12),
+                SelectableText(
+                  buffer.toString(),
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton.icon(
+            onPressed: () =>
+                Clipboard.setData(ClipboardData(text: buffer.toString())),
+            icon: const Icon(Icons.copy, size: 18),
+            label: const Text('Copiar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Listo'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
