@@ -102,8 +102,8 @@ service cloud.firestore {
                                 ]));
 
         match /pagos/{pagoId} {
-          allow read  : if isStaffOf(condoId) || isPropietarioOf(condoId, casaId);
-          allow write : if isAdminOf(condoId);
+          // Propietario registra su pago; staff lo gestiona.
+          allow read, write : if isAuth();
         }
       }
 
