@@ -151,15 +151,11 @@ service cloud.firestore {
     // guardias_auth
     // ==================================================================
     match /guardias_auth/{guardiaId} {
-      allow read   : if uid() == guardiaId
-                      || isSuper()
-                      || (resource != null && isAdminOf(resource.data.condominio));
-      allow create : if isSuper()
-                      || (request.resource != null && isAdminOf(newData().condominio));
-      allow update : if isSuper()
-                      || (resource != null && isAdminOf(resource.data.condominio));
-      allow delete : if isSuper()
-                      || (resource != null && isAdminOf(resource.data.condominio));
+      // Read abierto a autenticados: la app de guardia consulta por email tras
+      // loguear para confirmar el rol. Solo contiene email/condominio (sin
+      // secretos). La escritura solo ocurre server-side (Admin SDK / CF).
+      allow read  : if isAuth();
+      allow write : if isSuper();
     }
 
     // ==================================================================
