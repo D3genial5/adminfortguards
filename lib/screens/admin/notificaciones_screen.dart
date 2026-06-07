@@ -100,13 +100,13 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> with Single
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              _buildStatCard('Total', stats['total']!, Icons.notifications_rounded, Colors.blue),
+              _buildStatCard('Total', stats['total'] ?? 0, Icons.notifications_rounded, Colors.blue),
               const SizedBox(width: 8),
-              _buildStatCard('Enviadas', stats['enviadas']!, Icons.check_circle_rounded, Colors.green),
+              _buildStatCard('Enviadas', stats['enviadas'] ?? 0, Icons.check_circle_rounded, Colors.green),
               const SizedBox(width: 8),
-              _buildStatCard('Programadas', stats['programadas']!, Icons.schedule_rounded, Colors.orange),
+              _buildStatCard('Programadas', stats['programadas'] ?? 0, Icons.schedule_rounded, Colors.orange),
               const SizedBox(width: 8),
-              _buildStatCard('Urgentes', stats['urgentes']!, Icons.priority_high_rounded, Colors.red),
+              _buildStatCard('Urgentes', stats['urgentes'] ?? 0, Icons.priority_high_rounded, Colors.red),
             ],
           ),
         );

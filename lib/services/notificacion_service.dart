@@ -368,6 +368,8 @@ class NotificacionService {
         'total': notificaciones.length,
         'enviadas': notificaciones.where((n) => n.estado == EstadoNotificacion.enviada).length,
         'programadas': notificaciones.where((n) => n.estado == EstadoNotificacion.programada).length,
+        'canceladas': notificaciones.where((n) => n.estado == EstadoNotificacion.cancelada).length,
+        'urgentes': notificaciones.where((n) => n.prioridad == PrioridadNotificacion.urgente).length,
       };
     } catch (e) {
       throw Exception('Error al obtener estadísticas: $e');
