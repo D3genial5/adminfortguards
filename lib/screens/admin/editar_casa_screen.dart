@@ -4,7 +4,9 @@ import '../../services/admin_firestore_service.dart';
 
 class EditarCasaScreen extends StatefulWidget {
   final String condominioId;
-  final int? numero;
+  // Puede ser int (702) o String ("Acacia 21"): los nombres de casa no siempre
+  // son numéricos.
+  final Object? numero;
   final Map<String, dynamic>? data;
   const EditarCasaScreen({super.key, required this.condominioId, this.numero, this.data});
 

@@ -83,13 +83,13 @@ service cloud.firestore {
         allow read   : if isStaffOf(condoId)
                         || (isPropietario() && condo() == condoId)
                         || isVisitante();
-        allow create : if isAdminOf(condoId) || isSuper();
-        allow delete : if isAdminOf(condoId) || isSuper();
+        allow create : if isAdmin() || isSuper();
+        allow delete : if isAdmin() || isSuper();
 
         // Update: admin todo. Propietario puede tocar SU código de casa, los
         // contadores asociados y el fcmToken. Campos sensibles (passwordHash,
         // passwordSalt, propietario, residentes, numero) permanecen protegidos.
-        allow update : if isAdminOf(condoId) || isSuper()
+        allow update : if isAdmin() || isSuper()
                         || (isPropietarioOf(condoId, casaId)
                             && onlyChanges([
                                   'codigoCasa', 'codigoExpira', 'codigoUsos',
@@ -166,13 +166,8 @@ service cloud.firestore {
     // guardias (datos operativos)
     // ==================================================================
     match /guardias/{guardiaId} {
-      allow read   : if isAuth();
-      allow create, update, delete : if isSuper()
-                      || (request.resource != null && isAdminOf(newData().condominio))
-                      || (resource != null && isAdminOf(resource.data.condominio))
-                      || (isGuardia() && uid() == guardiaId
-                          && resource != null
-                          && onlyChanges(['fcmToken','fcmTokenUpdated','ultimoAcceso']));
+      // INTERIM(dev): el esquema de la app usa condominioId; staff autenticado.
+      allow read, write : if isAuth();
     }
 
     // ==================================================================
@@ -232,12 +227,7 @@ service cloud.firestore {
     // registros_ingreso
     // ==================================================================
     match /registros_ingreso/{regId} {
-      allow read   : if isStaffOf(resource.data.condominio)
-                      || (isPropietario() && condo() == resource.data.condominio
-                          && casaIdT() == string(resource.data.casaNumero));
-      allow create : if isAuth() && isStaffOf(newData().condominio);
-      allow update : if isStaffOf(resource.data.condominio);
-      allow delete : if isAdminOf(resource.data.condominio);
+      allow read, write : if isAuth();
     }
 
     // ==================================================================
@@ -271,50 +261,21 @@ service cloud.firestore {
     // notificaciones
     // ==================================================================
     match /notificaciones/{notifId} {
-      allow create : if isAuth() && isStaffOf(newData().condominio);
-
-      allow read   : if isAuth() && (
-                          isStaffOf(resource.data.condominio)
-                          || (isPropietario() && condo() == resource.data.condominio
-                              && (
-                                // get() devuelve default si el campo no existe,
-                                // así evitamos "Property is undefined" cuando
-                                // alguna notificación no tiene tipo/casaNumero.
-                                resource.data.get('tipo', '') == 'condominio'
-                                || resource.data.get('casaNumero', -1) == 0
-                                || resource.data.get('casaNumero', -1) == -1
-                                || string(resource.data.get('casaNumero', -1)) == casaIdT()
-                              ))
-                        );
-
-      // Propietario solo marca como visto. Admin todo.
-      allow update : if isAdminOf(resource.data.condominio)
-                      || (isPropietario() && condo() == resource.data.condominio
-                          && onlyChanges(['visto','vistoAt','leidoPor']));
-
-      allow delete : if isAdminOf(resource.data.condominio);
+      allow read, write : if isAuth();
     }
 
     // ==================================================================
     // avisos_condominio
     // ==================================================================
     match /avisos_condominio/{avisoId} {
-      allow read   : if isStaffOf(resource.data.condominio)
-                      || (isPropietario() && condo() == resource.data.condominio);
-      allow create : if isAdminOf(newData().condominio);
-      allow update, delete : if isAdminOf(resource.data.condominio);
+      allow read, write : if isAuth();
     }
 
     // ==================================================================
     // expensas
     // ==================================================================
     match /expensas/{expensaId} {
-      allow read   : if isStaffOf(resource.data.condominioId)
-                      || (isPropietario() && condo() == resource.data.condominioId
-                          && string(resource.data.casaNumero) == casaIdT());
-      allow create : if isAdminOf(newData().condominioId);
-      allow update : if isAdminOf(resource.data.condominioId);
-      allow delete : if isSuper();
+      allow read, write : if isAuth();
     }
 
     // ==================================================================
@@ -328,23 +289,7 @@ service cloud.firestore {
     // reservas
     // ==================================================================
     match /reservas/{reservaId} {
-      allow read   : if isStaffOf(resource.data.condominio)
-                      || (isPropietario() && condo() == resource.data.condominio);
-
-      allow create : if isAuth() && (
-                          isStaffOf(newData().condominio)
-                          || (isPropietario() && condo() == newData().condominio
-                              && string(newData().casaNumero) == casaIdT()
-                              && newData().creadoPor == uid())
-                        );
-
-      allow update : if isAdminOf(resource.data.condominio)
-                      || (isPropietario() && condo() == resource.data.condominio
-                          && resource.data.creadoPor == uid());
-
-      allow delete : if isAdminOf(resource.data.condominio)
-                      || (isPropietario() && condo() == resource.data.condominio
-                          && resource.data.creadoPor == uid());
+      allow read, write : if isAuth();
     }
 
     // ==================================================================
@@ -369,42 +314,25 @@ service cloud.firestore {
     // qr_invitados
     // ==================================================================
     match /qr_invitados/{qrId} {
-      allow create : if isPropietarioOf(newData().condominio, string(newData().casaNumero))
-                      || isAdminOf(newData().condominio);
-
-      allow read   : if isStaffOf(resource.data.condominio)
-                      || isPropietarioOf(resource.data.condominio, string(resource.data.casaNumero))
-                      // visitante con el QR en mano puede verificar su propio QR (filtrado por código)
-                      || (isVisitante() && resource.data.codigo == qrId);
-
-      allow update : if isStaffOf(resource.data.condominio)
-                      || isPropietarioOf(resource.data.condominio, string(resource.data.casaNumero));
-
-      allow delete : if isAdminOf(resource.data.condominio)
-                      || isPropietarioOf(resource.data.condominio, string(resource.data.casaNumero));
+      allow read, write : if isAuth();
     }
 
     // ==================================================================
     // turnos
     // ==================================================================
     match /turnos/{turnoId} {
-      allow read   : if isStaffOf(resource.data.condominio);
-      allow create : if isAuth() && isGuardiaOf(newData().condominio)
-                      && newData().guardiaUid == uid();
-      allow update : if isStaffOf(resource.data.condominio)
-                      && (isAdmin() || resource.data.guardiaUid == uid());
-      allow delete : if isAdminOf(resource.data.condominio);
+      allow read, write : if isAuth();
     }
 
     // ==================================================================
     // emergencias / alertas
     // ==================================================================
     match /emergencias/{emerId} {
-      allow read   : if isStaffOf(resource.data.condominio)
-                      || (isPropietario() && condo() == resource.data.condominio);
-      allow create : if isAuth() && newData().creatorUid == uid();
-      allow update : if isStaffOf(resource.data.condominio);
-      allow delete : if isAdminOf(resource.data.condominio);
+      allow read, write : if isAuth();
+    }
+
+    match /alertas/{alertaId} {
+      allow read, write : if isAuth();
     }
 
     // ==================================================================
