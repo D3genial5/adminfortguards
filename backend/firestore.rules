@@ -91,14 +91,9 @@ service cloud.firestore {
         // passwordSalt, propietario, residentes, numero) permanecen protegidos.
         allow update : if isAdmin() || isSuper()
                         || (isPropietarioOf(condoId, casaId)
-                            && onlyChanges([
-                                  'codigoCasa', 'codigoExpira', 'codigoUsos',
-                                  'usosPreferidos', 'duracionHoras',
-                                  'ultimaRegeneracion',
-                                  'regeneracionAutomatica', 'regeneracionPorTrigger',
-                                  'ultimoVisitanteNombre', 'ultimoVisitanteCI',
-                                  'ultimoVisitanteFotoFrente', 'ultimoVisitanteFotoReverso',
-                                  'fcmToken', 'fcmTokenUpdated'
+                            && untouched([
+                                  'passwordHash', 'passwordSalt', 'password',
+                                  'propietario', 'residentes', 'numero'
                                 ]));
 
         match /pagos/{pagoId} {
