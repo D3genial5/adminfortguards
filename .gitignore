@@ -55,3 +55,6 @@ serviceAccount*.json
 *.key
 *.keystore
 .env
+
+# Resumen de sesion (datos personales / cuentas) - NO commitear
+RESUMEN_SESION.md
