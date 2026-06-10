@@ -3,7 +3,7 @@ import '../../services/admin_firestore_service.dart';
 
 class ExpensasScreen extends StatefulWidget {
   final String condominioId;
-  final int numero;
+  final String numero;
   final bool estadoActual;
   const ExpensasScreen({super.key, required this.condominioId, required this.numero, required this.estadoActual});
 

@@ -214,7 +214,8 @@ export const loginPropietario = onCall(
       token: customToken,
       condominio: condoId,
       casaId: casaDoc.id,
-      casaNumero: casaData.numero ?? parseInt(casaDoc.id, 10),
+      // Siempre string: el identificador puede ser texto ("Acacia 21").
+      casaNumero: (casaData.numero ?? casaDoc.id).toString(),
       propietario: casaData.propietario ?? "",
       residentes: casaData.residentes ?? [],
     };

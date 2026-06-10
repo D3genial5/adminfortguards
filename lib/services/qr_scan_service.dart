@@ -71,7 +71,7 @@ class QrScanService {
           .collection('condominios')
           .doc(payload.condominio)
           .collection('casas')
-          .doc(payload.casaNumero.toString())
+          .doc(payload.casaNumero)
           .get();
 
       if (!casaDoc.exists) {
@@ -165,7 +165,7 @@ class QrScanService {
       return AccessInfoModel(
         tipo: 'invalido',
         condominio: 'Desconocido',
-        casaNumero: 0,
+        casaNumero: '',
         propietarioNombre: 'Error',
         estado: 'invalido',
         motivoInvalido: 'Error al procesar QR: ${e.toString()}',
@@ -178,7 +178,7 @@ class QrScanService {
   /// Busca información del invitado en access_requests
   static Future<Map<String, dynamic>?> _findInvitadoInfo(
     String condominio,
-    int casaNumero,
+    String casaNumero,
     String ciHash,
   ) async {
     try {
@@ -232,7 +232,7 @@ class QrScanService {
             .collection('condominios')
             .doc(payload.condominio)
             .collection('casas')
-            .doc(payload.casaNumero.toString())
+            .doc(payload.casaNumero)
             .get();
 
         if (doc.exists) {
@@ -292,7 +292,7 @@ class QrScanService {
           .collection('condominios')
           .doc(qrData.condominioId)
           .collection('casas')
-          .doc(qrData.casaNumero.toString())
+          .doc(qrData.casaNumero)
           .get();
 
       if (!casaDoc.exists) {

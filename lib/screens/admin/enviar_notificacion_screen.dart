@@ -4,7 +4,7 @@ import '../../services/notification_service.dart';
 
 class EnviarNotificacionScreen extends StatefulWidget {
   final String condominioId;
-  final int? numero; // Opcional para enviar a todo el condominio
+  final String? numero; // Opcional para enviar a todo el condominio
   
   const EnviarNotificacionScreen({
     super.key,
@@ -24,7 +24,7 @@ class _EnviarNotificacionScreenState extends State<EnviarNotificacionScreen> {
   
   String _tipoDestinatario = 'casa'; // 'casa', 'condominio', 'multiple'
   List<Map<String, dynamic>> _casasDisponibles = [];
-  List<int> _casasSeleccionadas = [];
+  List<String> _casasSeleccionadas = [];
   bool _isLoading = false;
   
   @override
@@ -46,7 +46,8 @@ class _EnviarNotificacionScreenState extends State<EnviarNotificacionScreen> {
       
       setState(() {
         _casasDisponibles = snapshot.docs
-            .map((doc) => {'numero': doc.data()['numero'], 'id': doc.id})
+            .map((doc) =>
+                {'numero': (doc.data()['numero'] ?? doc.id).toString(), 'id': doc.id})
             .toList();
       });
     } catch (e) {
@@ -241,14 +242,14 @@ class _EnviarNotificacionScreenState extends State<EnviarNotificacionScreen> {
                     // Selector de casas
                     if (_tipoDestinatario == 'casa' && widget.numero == null) ...[
                       const SizedBox(height: 12),
-                      DropdownButtonFormField<int>(
+                      DropdownButtonFormField<String>(
                         decoration: const InputDecoration(
                           labelText: 'Seleccionar casa',
                           border: OutlineInputBorder(),
                         ),
                         items: _casasDisponibles
-                            .map((casa) => DropdownMenuItem<int>(
-                                  value: casa['numero'] as int,
+                            .map((casa) => DropdownMenuItem<String>(
+                                  value: casa['numero'] as String,
                                   child: Text('Casa ${casa['numero']}'),
                                 ))
                             .toList(),
@@ -281,7 +282,7 @@ class _EnviarNotificacionScreenState extends State<EnviarNotificacionScreen> {
                           itemCount: _casasDisponibles.length,
                           itemBuilder: (context, index) {
                             final casa = _casasDisponibles[index];
-                            final numero = casa['numero'] as int;
+                            final numero = casa['numero'] as String;
                             
                             return CheckboxListTile(
                               title: Text('Casa $numero'),

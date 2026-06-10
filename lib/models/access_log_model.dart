@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class AccessLogModel {
   final String? id;
   final String condominio;
-  final int casaNumero;
+  final String casaNumero;
   final String guardiaId;
   final String guardiaNombre;
   final String resultado; // 'permitido' | 'denegado'
@@ -39,7 +39,7 @@ class AccessLogModel {
     return AccessLogModel(
       id: doc.id,
       condominio: data['condominio'] as String,
-      casaNumero: data['casaNumero'] as int,
+      casaNumero: data['casaNumero'].toString(),
       guardiaId: data['guardiaId'] as String,
       guardiaNombre: data['guardiaNombre'] as String,
       resultado: data['resultado'] as String,
@@ -75,7 +75,7 @@ class AccessLogModel {
   AccessLogModel copyWith({
     String? id,
     String? condominio,
-    int? casaNumero,
+    String? casaNumero,
     String? guardiaId,
     String? guardiaNombre,
     String? resultado,

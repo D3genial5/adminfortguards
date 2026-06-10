@@ -22,7 +22,7 @@ class AccessService {
             .collection('condominios')
             .doc(accessInfo.condominio)
             .collection('casas')
-            .doc(accessInfo.casaNumero.toString());
+            .doc(accessInfo.casaNumero);
 
         // 2. Leer datos actuales de la casa
         final casaDoc = await transaction.get(casaRef);
@@ -147,7 +147,7 @@ class AccessService {
   /// Crea una notificación para el propietario
   static Future<void> _createNotification({
     required String condominio,
-    required int casaNumero,
+    required String casaNumero,
     String? visitanteNombre,
     required String guardiaNombre,
   }) async {
@@ -180,7 +180,7 @@ class AccessService {
   /// Obtiene logs de acceso con filtros
   static Stream<List<AccessLogModel>> getAccessLogs({
     String? condominio,
-    int? casaNumero,
+    String? casaNumero,
     String? guardiaId,
     DateTime? desde,
     DateTime? hasta,

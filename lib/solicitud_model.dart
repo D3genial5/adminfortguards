@@ -3,7 +3,7 @@ class SolicitudModel {
   final String apellidos;
   final String ci;
   final String condominio;
-  final int casaNumero;
+  final String casaNumero;
   final DateTime fecha;
   final String estado; // 'pendiente', 'aceptada', 'rechazada'
 
@@ -23,7 +23,7 @@ class SolicitudModel {
       apellidos: json['apellidos'],
       ci: json['ci'],
       condominio: json['condominio'],
-      casaNumero: json['casaNumero'],
+      casaNumero: json['casaNumero'].toString(),
       fecha: DateTime.parse(json['fecha']),
       estado: json['estado'],
     );

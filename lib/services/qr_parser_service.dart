@@ -25,18 +25,16 @@ class QrParserService {
         }
 
         if (cond != null && cond.isNotEmpty && casa != null && casa.isNotEmpty) {
-          // Extraer número de casa (puede venir como "Casa 1" o "1")
-          final casaNumMatch = RegExp(r'\d+').firstMatch(casa);
-          if (casaNumMatch != null) {
-            final casaNum = int.tryParse(casaNumMatch.group(0)!);
-            if (casaNum != null) {
-              return QrData(
-                condominioId: cond,
-                casaNumero: casaNum,
-                codigo: codigo ?? '',
-                source: 'fortguardsapp_pipe',
-              );
-            }
+          // El identificador puede ser numérico ("21") o texto ("Acacia 21").
+          // Si viene con prefijo "Casa ", se quita.
+          final casaId = casa.replaceFirst(RegExp(r'^[Cc]asa\s+'), '').trim();
+          if (casaId.isNotEmpty) {
+            return QrData(
+              condominioId: cond,
+              casaNumero: casaId,
+              codigo: codigo ?? '',
+              source: 'fortguardsapp_pipe',
+            );
           }
         }
       }
@@ -44,13 +42,13 @@ class QrParserService {
       // 2) Formato JSON (con firma HMAC)
       if (s.startsWith('{')) {
         final m = jsonDecode(s) as Map<String, dynamic>;
-        
+
         // Formato con tipo "fg_pass"
         if ((m['type'] ?? '') == 'fg_pass') {
           final cond = (m['condominio'] ?? '').toString();
-          final casa = int.tryParse((m['casa'] ?? '').toString());
+          final casa = (m['casa'] ?? '').toString().trim();
           final cod = (m['codigo'] ?? '').toString();
-          if (cond.isNotEmpty && casa != null && cod.length == 3 && RegExp(r'^\d{3}$').hasMatch(cod)) {
+          if (cond.isNotEmpty && casa.isNotEmpty && cod.length == 3 && RegExp(r'^\d{3}$').hasMatch(cod)) {
             return QrData(
               condominioId: cond,
               casaNumero: casa,
@@ -64,10 +62,10 @@ class QrParserService {
 
         // Formato JSON genérico
         final cond = (m['condominio'] ?? '').toString();
-        final casa = int.tryParse((m['casa'] ?? m['casaNumero'] ?? '').toString());
+        final casa = (m['casa'] ?? m['casaNumero'] ?? '').toString().trim();
         final cod = (m['codigo'] ?? m['codigoCasa'] ?? '').toString();
-        
-        if (cond.isNotEmpty && casa != null) {
+
+        if (cond.isNotEmpty && casa.isNotEmpty) {
           return QrData(
             condominioId: cond,
             casaNumero: casa,
@@ -83,9 +81,9 @@ class QrParserService {
       if (s.startsWith('fortguards://') || s.startsWith('http')) {
         final uri = Uri.parse(s);
         final cond = uri.queryParameters['condominio'] ?? '';
-        final casa = int.tryParse(uri.queryParameters['casa'] ?? '');
+        final casa = (uri.queryParameters['casa'] ?? '').trim();
         final cod = uri.queryParameters['codigo'] ?? '';
-        if (cond.isNotEmpty && casa != null && (cod.isEmpty || RegExp(r'^\d{3}$').hasMatch(cod))) {
+        if (cond.isNotEmpty && casa.isNotEmpty && (cod.isEmpty || RegExp(r'^\d{3}$').hasMatch(cod))) {
           return QrData(
             condominioId: cond,
             casaNumero: casa,
@@ -100,9 +98,9 @@ class QrParserService {
         final parts = s.split(':');
         if (parts.length >= 3) {
           final cond = parts[1];
-          final casa = int.tryParse(parts[2]);
+          final casa = parts[2].trim();
           final cod = parts.length >= 4 ? parts[3] : '';
-          if (cond.isNotEmpty && casa != null && (cod.isEmpty || RegExp(r'^\d{3}$').hasMatch(cod))) {
+          if (cond.isNotEmpty && casa.isNotEmpty && (cod.isEmpty || RegExp(r'^\d{3}$').hasMatch(cod))) {
             return QrData(
               condominioId: cond,
               casaNumero: casa,
@@ -129,7 +127,7 @@ class QrParserService {
 /// Datos parseados del QR
 class QrData {
   final String condominioId;
-  final int casaNumero;
+  final String casaNumero;
   final String codigo;
   final String source;
   final String? signature;

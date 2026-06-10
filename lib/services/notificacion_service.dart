@@ -281,7 +281,7 @@ class NotificacionService {
       // Formato simple compatible con app propietarios
       final dataPropietario = {
         'condominio': notificacion.condominioId,
-        'casaNumero': 0, // 0 = todo el condominio
+        'casaNumero': '0', // '0' = todo el condominio
         'titulo': notificacion.titulo,
         'mensaje': notificacion.mensaje,
         'fecha': notificacion.fechaCreacion,

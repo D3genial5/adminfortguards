@@ -55,7 +55,8 @@ class _EditarCasaScreenState extends State<EditarCasaScreen> {
     try {
       final casasSnapshot = await AdminFirestoreService.obtenerCasas(widget.condominioId);
       final casas = casasSnapshot.docs.map((doc) => doc.data()).toList();
-      final casa = casas.firstWhere((c) => c['numero'] == widget.numero);
+      final casa = casas.firstWhere(
+          (c) => c['numero'].toString() == widget.numero.toString());
       
       setState(() {
         _propietarioCtrl.text = casa['propietario'] ?? '';
@@ -100,10 +101,15 @@ class _EditarCasaScreenState extends State<EditarCasaScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final numero = int.parse(_numeroCtrl.text.trim());
+      final numero = _numeroCtrl.text.trim();
+      // ID original de la casa: si cambia, el servicio renombra el documento
+      // en vez de crear uno duplicado.
+      final numeroAnterior =
+          (widget.numero ?? widget.data?['numero'])?.toString();
       await AdminFirestoreService.guardarCasa(
         condominioId: widget.condominioId,
         numero: numero,
+        numeroAnterior: numeroAnterior,
         propietario: _propietarioCtrl.text.trim(),
         residentes: _residentesCtrl.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
         direccion: _direccionCtrl.text.trim().isNotEmpty ? _direccionCtrl.text.trim() : null,
@@ -190,12 +196,10 @@ class _EditarCasaScreenState extends State<EditarCasaScreen> {
             _buildCard([
               _buildTextField(
                 controller: _numeroCtrl,
-                label: 'Número de casa',
-                hint: 'Ej: 101',
+                label: 'Número o nombre de casa',
+                hint: 'Ej: 101 o Acacia 21',
                 icon: Icons.home_outlined,
-                keyboardType: TextInputType.number,
                 required: true,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               ),
               const SizedBox(height: 20),
               _buildTextField(

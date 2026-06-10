@@ -10,7 +10,7 @@ class QrVerifyResult {
   final bool valid;
   final String? reason;
   final String? condominio;
-  final int? casaNumero;
+  final String? casaNumero;
   final String? casa;
   final String? visitanteNombre;
   final String? visitanteCi;
@@ -165,7 +165,7 @@ class QrVerifyService {
     return QrVerifyResult(
       valid: true,
       condominio: data['condominio'] as String?,
-      casaNumero: data['casaNumero'] as int?,
+      casaNumero: data['casaNumero']?.toString(),
       casa: 'Casa ${data['casaNumero']}',
       visitanteNombre: data['nombre'] as String? ?? 'Visitante',
       visitanteCi: ci,
@@ -215,7 +215,7 @@ class QrVerifyService {
       return QrVerifyResult(
         valid: true,
         condominio: cond,
-        casaNumero: r['casaNumero'] as int?,
+        casaNumero: r['casaNumero']?.toString(),
         casa: 'Casa ${r['casaNumero']}',
         visitanteNombre: r['propietario'] as String? ?? 'Propietario',
         tipoAcceso: r['tipo'] == 'inv' ? 'invitado' : 'propietario',
@@ -290,11 +290,11 @@ class QrVerifyService {
       return QrVerifyResult.invalid('QR de otro condominio');
     }
 
-    final casaNumMatch = RegExp(r'(\d+)').firstMatch(casaStr);
-    if (casaNumMatch == null) {
+    // El identificador puede ser numérico ("21") o texto ("Acacia 21").
+    final casaNum = casaStr.replaceFirst(RegExp(r'^[Cc]asa\s+'), '').trim();
+    if (casaNum.isEmpty) {
       return QrVerifyResult.invalid('No se pudo identificar la casa');
     }
-    final casaNum = int.parse(casaNumMatch.group(1)!);
 
     // Caso A: visitante walk-up con CI — debe haber access_request 'aceptada'
     if (ciFromQr != null && ciFromQr.isNotEmpty) {
@@ -367,7 +367,7 @@ class QrVerifyService {
           .collection('condominios')
           .doc(condominio)
           .collection('casas')
-          .doc(casaNum.toString())
+          .doc(casaNum)
           .get();
       if (!casaDoc.exists) {
         return QrVerifyResult.invalid('Casa no encontrada');

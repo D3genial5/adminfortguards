@@ -186,7 +186,7 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
     }
 
     final condominio = qrInfo['condominio']?.toString();
-    final casaNumero = qrInfo['casaNumero'] as int?;
+    final casaNumero = qrInfo['casaNumero']?.toString();
     final ci = qrInfo['ci']?.toString();
     if (condominio == null || casaNumero == null || ci == null || ci.isEmpty) {
       return null;

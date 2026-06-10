@@ -132,7 +132,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 itemCount: docs.length,
                 itemBuilder: (context, index) {
                   final data = docs[index].data();
-                  final numero = data['numero'];
+                  // Identificador canónico = ID del documento (numérico o texto)
+                  final numero = (data['numero'] ?? docs[index].id).toString();
                   final propietario = data['propietario'];
                   final isPagada = _isExpensaPagada(data);
                   final estadoLabel = isPagada ? 'Pagada' : 'Pendiente';
@@ -288,10 +289,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                     Navigator.push(context, MaterialPageRoute(
                                       builder: (_) => EditarPropietarioScreen(
                                         condominio: condominioId,
-                                        casa: numero.toString(),
+                                        casa: numero,
                                         propietarioNombre: propietario,
                                       ),
                                     ));
+                                  } else if (value == 'eliminar') {
+                                    _confirmarEliminarCasa(context, numero);
                                   } else if (value == 'expensa') {
                                     Navigator.push(context, MaterialPageRoute(
                                       builder: (_) => ExpensasScreen(condominioId: condominioId, numero: numero, estadoActual: isPagada),
@@ -341,6 +344,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                         Icon(Icons.notifications_outlined, size: 20, color: Color(0xFF6B7280)),
                                         SizedBox(width: 12),
                                         Text('Enviar notificación'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'eliminar',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.delete_outline_rounded, size: 20, color: Color(0xFFEF4444)),
+                                        SizedBox(width: 12),
+                                        Text('Eliminar casa', style: TextStyle(color: Color(0xFFEF4444))),
                                       ],
                                     ),
                                   ),
@@ -398,6 +411,52 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   void _volverASeleccionRol() {
     GoRouter.of(context).go('/');
+  }
+
+  Future<void> _confirmarEliminarCasa(BuildContext context, String numero) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar casa'),
+        content: Text(
+            '¿Estás seguro que deseas eliminar la casa "$numero"? El propietario perderá su acceso. Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade600),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado != true || !mounted) return;
+
+    try {
+      await AdminFirestoreService.eliminarCasa(
+        condominioId: condominioId,
+        numero: numero,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(this.context).showSnackBar(
+        SnackBar(
+          content: Text('Casa "$numero" eliminada'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(this.context).showSnackBar(
+        SnackBar(
+          content: Text('Error al eliminar: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   bool _isExpensaPagada(Map<String, dynamic> data) {

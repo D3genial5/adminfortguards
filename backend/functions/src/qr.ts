@@ -78,13 +78,16 @@ export const signQrPayload = onCall(
       visitanteCi,      // string opcional
     } = request.data ?? {};
 
+    // El identificador de casa puede ser numérico (21) o texto ("Acacia 21").
     if (
       typeof condominio !== "string" ||
-      typeof casaNumero !== "number" ||
+      (typeof casaNumero !== "number" && typeof casaNumero !== "string") ||
+      (typeof casaNumero === "string" && casaNumero.trim().length === 0) ||
       typeof codigoCasa !== "string"
     ) {
       throw new HttpsError("invalid-argument", "Datos inválidos");
     }
+    const casaId = casaNumero.toString().trim();
 
     // Permisos: propietario de la casa, guardia del condo, o admin
     const ok =
@@ -93,7 +96,7 @@ export const signQrPayload = onCall(
       (claims.role === "guardia" && claims.condominio === condominio) ||
       (claims.role === "propietario" &&
         claims.condominio === condominio &&
-        claims.casaId === casaNumero.toString());
+        claims.casaId === casaId);
     if (!ok) throw new HttpsError("permission-denied", "No autorizado para firmar");
 
     const now = Date.now();
@@ -102,7 +105,7 @@ export const signQrPayload = onCall(
 
     const payload: Record<string, unknown> = {
       c: condominio,
-      h: casaNumero,
+      h: casaId,
       k: codigoCasa,
       t: tipo === "invitado" ? "inv" : "prop",
       iat: now,
@@ -165,13 +168,15 @@ export const verifyQrPayload = onCall(
       return { valid: false, reason: "expired" };
     }
 
-    const casaNumero = payload.h as number;
+    // h puede ser numérico (QRs antiguos) o texto ("Acacia 21").
+    const casaNumero = String(payload.h ?? "");
     const codigoCasa = payload.k as string;
+    if (!casaNumero) return { valid: false, reason: "missing_fields" };
 
     // Cross-check con Firestore
     const casaDoc = await db()
       .collection("condominios").doc(condominio)
-      .collection("casas").doc(casaNumero.toString()).get();
+      .collection("casas").doc(casaNumero).get();
 
     if (!casaDoc.exists) return { valid: false, reason: "casa_not_found" };
     const casa = casaDoc.data() ?? {};

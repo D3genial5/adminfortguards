@@ -2,7 +2,7 @@
 class AccessInfoModel {
   final String tipo; // 'propietario' | 'invitado'
   final String condominio;
-  final int casaNumero;
+  final String casaNumero;
   final String propietarioNombre;
   final String? visitanteNombre;
   final String? visitanteCi;

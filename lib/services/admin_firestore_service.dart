@@ -16,12 +16,16 @@ class AdminFirestoreService {
     return await _db.collection('condominios').doc(condominioId).collection('casas').get();
   }
 
-  /// Crea o actualiza una casa
+  /// Crea o actualiza una casa.
+  /// El identificador puede ser numérico ("101") o texto ("Acacia 21").
+  /// Si [numeroAnterior] difiere de [numero], la casa se renombra: se copian
+  /// los datos (incluida la contraseña) al nuevo documento y se borra el viejo.
   static Future<void> guardarCasa({
     required String condominioId,
-    required int numero,
+    required String numero,
     required String propietario,
     required List<String> residentes,
+    String? numeroAnterior,
     String? direccion,
     String? cedulaPropietario,
     String? telefonoPropietario,
@@ -29,21 +33,24 @@ class AdminFirestoreService {
     String? cedulaResidente,
     String? telefonoResidente,
   }) async {
-    final casaRef = _db
+    final casas = _db
         .collection('condominios')
         .doc(condominioId)
-        .collection('casas')
-        .doc(numero.toString());
-    
+        .collection('casas');
+    final casaRef = casas.doc(numero);
+
+    final esRenombre = numeroAnterior != null &&
+        numeroAnterior.isNotEmpty &&
+        numeroAnterior != numero;
+
     // Verificar si la casa ya existe para determinar si es nueva
     final casaSnapshot = await casaRef.get();
-    final isNuevaCasa = !casaSnapshot.exists;
-    
-    final data = {
+    final isNuevaCasa = !casaSnapshot.exists && !esRenombre;
+
+    final data = <String, dynamic>{
       'numero': numero,
       'propietario': propietario,
       'residentes': residentes,
-      'estadoExpensa': isNuevaCasa ? 'pendiente' : (casaSnapshot.data()?['estadoExpensa'] ?? 'pendiente'),
       'fechaActualizacion': FieldValue.serverTimestamp(),
     };
 
@@ -67,7 +74,21 @@ class AdminFirestoreService {
       data['telefonoResidente'] = telefonoResidente;
     }
 
-    if (isNuevaCasa) {
+    if (esRenombre) {
+      // Renombre: el ID del documento es el número de casa, así que se copia
+      // el doc viejo completo (contraseña, expensa, etc.) al nuevo ID y se
+      // borra el anterior para no dejar casas duplicadas.
+      final viejaRef = casas.doc(numeroAnterior);
+      final viejaSnap = await viejaRef.get();
+      final base = viejaSnap.data() ?? <String, dynamic>{};
+      data['estadoExpensa'] = base['estadoExpensa'] ?? 'pendiente';
+      await casaRef.set({...base, ...data}, SetOptions(merge: true));
+      if (viejaSnap.exists) {
+        await viejaRef.delete();
+      }
+      AppLog.log('Casa $numeroAnterior renombrada a $numero');
+    } else if (isNuevaCasa) {
+      data['estadoExpensa'] = 'pendiente';
       // Generar contraseña hasheada para el propietario
       final password = AuthService.generarPasswordSeguro(length: 10);
       final salt = AuthService.generarPasswordSeguro(length: 16);
@@ -80,17 +101,31 @@ class AdminFirestoreService {
       // La contraseña temporal se devuelve para mostrar una sola vez
       AppLog.log('Casa $numero creada para propietario: $propietario');
     } else {
-      // Edición: solo actualizar datos (no tocar password)
+      // Edición: solo actualizar datos (no tocar password ni expensa)
       await casaRef.set(data, SetOptions(merge: true));
       AppLog.log('Casa $numero actualizada');
     }
+  }
+
+  /// Elimina una casa por su identificador (numérico o texto).
+  static Future<void> eliminarCasa({
+    required String condominioId,
+    required String numero,
+  }) async {
+    await _db
+        .collection('condominios')
+        .doc(condominioId)
+        .collection('casas')
+        .doc(numero)
+        .delete();
+    AppLog.log('Casa $numero eliminada de $condominioId');
   }
 
   /// Cambia el estado de la expensa a 'pagada' o 'pendiente'
   /// Sincroniza con la colección compartida para que la app de propietarios vea el cambio
   static Future<void> actualizarEstadoExpensa({
     required String condominioId,
-    required int numero,
+    required String numero,
     required bool pagada,
     double? montoPagado,
   }) async {
@@ -112,7 +147,7 @@ class AdminFirestoreService {
         .collection('condominios')
         .doc(condominioId)
         .collection('casas')
-        .doc(numero.toString())
+        .doc(numero)
         .update(updateData);
     
     // Sincronizar con colección de expensas compartida para propietarios
@@ -127,7 +162,7 @@ class AdminFirestoreService {
   /// Sincroniza el estado de expensa con la colección compartida
   static Future<void> _sincronizarExpensaConPropietarios({
     required String condominioId,
-    required int casaNumero,
+    required String casaNumero,
     required bool pagada,
     double? montoPagado,
   }) async {
@@ -228,7 +263,7 @@ class AdminFirestoreService {
 
   static Future<void> enviarNotificacion({
     required String condominioId,
-    required int numero,
+    required String numero,
     required String titulo,
     required String mensaje,
   }) async {

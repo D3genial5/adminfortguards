@@ -71,7 +71,9 @@ class CondominioService {
       final hash = AuthService.hashWithSalt(password, realSalt);
 
       final casaData = casa.toFirestore();
-      casaData['numero'] = int.tryParse(casa.nombre) ?? casa.nombre;
+      // Siempre String: las queries de Firestore son sensibles al tipo y el
+      // identificador de casa puede ser texto ("Acacia 21").
+      casaData['numero'] = casa.nombre;
       casaData['estadoExpensa'] = 'pendiente';
       casaData['passwordHash'] = hash;
       casaData['passwordSalt'] = realSalt;
