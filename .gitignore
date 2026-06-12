@@ -58,3 +58,5 @@ serviceAccount*.json
 
 # Resumen de sesion (datos personales / cuentas) - NO commitear
 RESUMEN_SESION.md
+
+*.jks

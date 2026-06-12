@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../core/fcm_topics.dart';
 
 /// GlobalKey para acceder al Navigator desde servicios
 final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
@@ -307,7 +308,7 @@ class NotificationService {
   // Suscribirse a topic del condominio
   Future<void> subscribeToCondominio(String condominioId) async {
     try {
-      await _fcm.subscribeToTopic('condominio_$condominioId');
+      await _fcm.subscribeToTopic(fcmTopic('condominio_$condominioId'));
       if (kDebugMode) debugPrint('Suscrito al topic: condominio_$condominioId');
     } catch (e) {
       if (kDebugMode) debugPrint('Error suscribiendo a topic: $e');
@@ -317,7 +318,7 @@ class NotificationService {
   // Desuscribirse de topic del condominio
   Future<void> unsubscribeFromCondominio(String condominioId) async {
     try {
-      await _fcm.unsubscribeFromTopic('condominio_$condominioId');
+      await _fcm.unsubscribeFromTopic(fcmTopic('condominio_$condominioId'));
       if (kDebugMode) debugPrint('Desuscrito del topic: condominio_$condominioId');
     } catch (e) {
       if (kDebugMode) debugPrint('Error desuscribiendo de topic: $e');

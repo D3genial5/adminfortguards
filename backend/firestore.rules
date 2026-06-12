@@ -51,6 +51,10 @@ service cloud.firestore {
 
     function newData() { return request.resource.data; }
 
+    // Condominio de un doc tolerando ambos esquemas de campo
+    // (admin escribe `condominioId`, fortguardsapp escribe `condominio`).
+    function condoOf(d) { return d.get('condominio', d.get('condominioId', '')); }
+
     // ==================================================================
     // condominios_secrets — qrSecret, HMAC keys
     // ==================================================================
@@ -97,9 +101,19 @@ service cloud.firestore {
                                 ]));
 
         match /pagos/{pagoId} {
-          // Propietario registra su pago; staff lo gestiona.
-          allow read, write : if isAuth();
+          // Propietario de ESTA casa registra/lee sus pagos; staff gestiona.
+          allow read   : if isStaffOf(condoId) || isPropietarioOf(condoId, casaId);
+          allow create : if isStaffOf(condoId) || isPropietarioOf(condoId, casaId);
+          allow update, delete : if isSuper() || isAdminOf(condoId);
         }
+      }
+
+      // -------------------- notificaciones (subcolección) -------------
+      // Solo la lee notificaciones_condominio_screen (hoy nadie escribe ahí).
+      match /notificaciones/{notifId} {
+        allow read  : if isStaffOf(condoId)
+                       || (isPropietario() && condo() == condoId);
+        allow write : if isSuper() || isAdminOf(condoId);
       }
 
       // -------------------- areas_comunes ----------------------------
@@ -115,17 +129,14 @@ service cloud.firestore {
       match /reservas/{reservaId} {
         allow read   : if isStaffOf(condoId)
                         || (isPropietario() && condo() == condoId);
-        allow create : if isAuth() && (
-                          isStaffOf(condoId)
-                          || (isPropietario() && condo() == condoId
-                              && newData().creadoPor == uid())
-                        );
-        allow update : if isAdminOf(condoId)
-                        || (isPropietario() && condo() == condoId
-                            && resource.data.creadoPor == uid());
-        allow delete : if isAdminOf(condoId)
-                        || (isPropietario() && condo() == condoId
-                            && resource.data.creadoPor == uid());
+        // Propietario reserva para SU casa (la app escribe casaNumero).
+        allow create : if isStaffOf(condoId)
+                        || isPropietarioOf(condoId, string(newData().casaNumero));
+        // Propietario cancela/edita su reserva; admin aprueba/rechaza.
+        allow update : if isSuper() || isAdminOf(condoId)
+                        || isPropietarioOf(condoId, string(resource.data.casaNumero));
+        allow delete : if isSuper() || isAdminOf(condoId)
+                        || isPropietarioOf(condoId, string(resource.data.casaNumero));
       }
     }
 
@@ -157,8 +168,18 @@ service cloud.firestore {
     // guardias (datos operativos)
     // ==================================================================
     match /guardias/{guardiaId} {
-      // INTERIM(dev): el esquema de la app usa condominioId; staff autenticado.
-      allow read, write : if isAuth();
+      // Branch explícito por campo: necesario para que las queries con
+      // where('condominioId'==X) sean probables por el motor de reglas.
+      allow read   : if isSuper()
+                      || ('condominioId' in resource.data
+                          && isStaffOf(resource.data.condominioId));
+      allow create : if isSuper() || isAdminOf(condoOf(newData()));
+      allow update : if isSuper()
+                      || isAdminOf(condoOf(resource.data))
+                      // El propio guardia actualiza datos operativos (no condominio/rol)
+                      || (isGuardiaOf(condoOf(resource.data))
+                          && untouched(['condominioId', 'condominio', 'email']));
+      allow delete : if isSuper() || isAdminOf(condoOf(resource.data));
     }
 
     // ==================================================================
@@ -218,7 +239,15 @@ service cloud.firestore {
     // registros_ingreso
     // ==================================================================
     match /registros_ingreso/{regId} {
-      allow read, write : if isAuth();
+      // Visitante (anon) escucha la confirmación de su entrada por sessionId:
+      // solo puede leer docs de sesión QR, no el historial general.
+      allow read   : if isSuper()
+                      || ('condominio' in resource.data
+                          && isStaffOf(resource.data.condominio))
+                      || (isVisitante() && 'sessionId' in resource.data);
+      allow create : if isStaffOf(condoOf(newData()));
+      allow update : if isStaffOf(condoOf(resource.data));
+      allow delete : if isSuper() || isAdminOf(condoOf(resource.data));
     }
 
     // ==================================================================
@@ -251,22 +280,55 @@ service cloud.firestore {
     // ==================================================================
     // notificaciones
     // ==================================================================
+    // Dos esquemas conviven: admin usa {condominioId, fechaCreacion, estado};
+    // fortguardsapp usa {condominio, casaNumero, fecha, visto} y copias
+    // personales con {to: uid|'todos', leida}.
     match /notificaciones/{notifId} {
-      allow read, write : if isAuth();
+      allow read   : if isSuper()
+                      // Esquema admin: condominioId
+                      || ('condominioId' in resource.data
+                          && isStaffOf(resource.data.condominioId))
+                      // Esquema app propietario: condominio (la app filtra por casa)
+                      || ('condominio' in resource.data
+                          && (isStaffOf(resource.data.condominio)
+                              || (isPropietario()
+                                  && resource.data.condominio == condo())))
+                      // Copia personal o broadcast
+                      || ('to' in resource.data
+                          && (resource.data.to == uid()
+                              || resource.data.to == 'todos'));
+      allow create : if isSuper() || isAdmin() || isGuardia()
+                      // Cualquier usuario guarda su propia copia (FCM → Firestore)
+                      || newData().get('to', '') == uid();
+      allow update : if isSuper()
+                      || isAdminOf(condoOf(resource.data))
+                      // Marcar como vista/leída
+                      || ((resource.data.get('to', '') == uid()
+                            || (isPropietario() && condoOf(resource.data) == condo()))
+                          && onlyChanges(['visto', 'leida']));
+      allow delete : if isSuper() || isAdminOf(condoOf(resource.data));
     }
 
     // ==================================================================
-    // avisos_condominio
+    // avisos_condominio (sin uso en apps actuales — solo staff)
     // ==================================================================
     match /avisos_condominio/{avisoId} {
-      allow read, write : if isAuth();
+      allow read  : if isStaffOf(condoOf(resource.data))
+                     || (isPropietario() && condoOf(resource.data) == condo());
+      allow write : if isSuper() || isAdminOf(condoOf(newData()));
     }
 
     // ==================================================================
-    // expensas
+    // expensas (colección compartida, escribe el admin)
     // ==================================================================
     match /expensas/{expensaId} {
-      allow read, write : if isAuth();
+      allow read   : if isSuper()
+                      || ('condominioId' in resource.data
+                          && (isStaffOf(resource.data.condominioId)
+                              || (isPropietario()
+                                  && resource.data.condominioId == condo())));
+      allow create, update : if isSuper() || isAdminOf(condoOf(newData()));
+      allow delete : if isSuper() || isAdminOf(condoOf(resource.data));
     }
 
     // ==================================================================
@@ -277,10 +339,10 @@ service cloud.firestore {
     }
 
     // ==================================================================
-    // reservas
+    // reservas (top-level — las apps usan la subcolección; solo staff)
     // ==================================================================
     match /reservas/{reservaId} {
-      allow read, write : if isAuth();
+      allow read, write : if isSuper() || isAdminOf(condoOf(resource.data));
     }
 
     // ==================================================================
@@ -305,25 +367,58 @@ service cloud.firestore {
     // qr_invitados
     // ==================================================================
     match /qr_invitados/{qrId} {
-      allow read, write : if isAuth();
+      allow read   : if isSuper()
+                      || ('condominio' in resource.data
+                          && (isStaffOf(resource.data.condominio)
+                              || isPropietarioOf(resource.data.condominio,
+                                                 resource.data.casaNumero)));
+      // Propietario genera QRs solo para SU casa
+      allow create : if isSuper() || isAdminOf(newData().condominio)
+                      || isPropietarioOf(newData().condominio,
+                                         newData().casaNumero);
+      // Guardia decrementa usos / cambia estado; propietario revoca el suyo
+      allow update : if isSuper()
+                      || isStaffOf(resource.data.condominio)
+                      || isPropietarioOf(resource.data.condominio,
+                                         resource.data.casaNumero);
+      allow delete : if isSuper() || isAdminOf(resource.data.condominio)
+                      || isPropietarioOf(resource.data.condominio,
+                                         resource.data.casaNumero);
     }
 
     // ==================================================================
     // turnos
     // ==================================================================
     match /turnos/{turnoId} {
-      allow read, write : if isAuth();
+      allow read   : if isSuper()
+                      || ('condominioId' in resource.data
+                          && isStaffOf(resource.data.condominioId));
+      allow create : if isSuper() || isAdminOf(condoOf(newData()));
+      // Guardia reporta en su turno; admin gestiona
+      allow update : if isSuper() || isStaffOf(condoOf(resource.data));
+      allow delete : if isSuper() || isAdminOf(condoOf(resource.data));
     }
 
     // ==================================================================
-    // emergencias / alertas
+    // emergencias (sin uso en apps actuales — solo staff)
     // ==================================================================
     match /emergencias/{emerId} {
-      allow read, write : if isAuth();
+      allow read, write : if isSuper() || isStaffOf(condoOf(resource.data));
     }
 
+    // ==================================================================
+    // alertas (pánico) — propietario crea, staff atiende
+    // ==================================================================
     match /alertas/{alertaId} {
-      allow read, write : if isAuth();
+      allow read   : if isSuper()
+                      || ('condominio' in resource.data
+                          && (isStaffOf(resource.data.condominio)
+                              || (isPropietario()
+                                  && resource.data.condominio == condo())));
+      allow create : if isPropietario() && newData().condominio == condo();
+      // Guardia/admin atiende (estado, atendidaPor, notas)
+      allow update : if isSuper() || isStaffOf(resource.data.condominio);
+      allow delete : if isSuper() || isAdminOf(resource.data.condominio);
     }
 
     // ==================================================================

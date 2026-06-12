@@ -7,6 +7,13 @@ import { getMessaging } from "firebase-admin/messaging";
 
 const messaging = () => getMessaging();
 
+// Los nombres de topic FCM solo admiten [a-zA-Z0-9-_.~%]. Condominio y casa
+// pueden tener espacios u otros caracteres ("Acacia 21") — se reemplazan por
+// "_". DEBE coincidir con fcmTopic() en las apps Flutter.
+function safeTopic(raw: string): string {
+  return raw.replace(/[^a-zA-Z0-9\-_.~%]/g, "_");
+}
+
 // =============================================================================
 // onNotificacionCreada — push cuando admin crea notificación
 // =============================================================================
@@ -28,8 +35,8 @@ export const onNotificacionCreada = onDocumentCreated(
       const casaNumero = data.casaNumero;
 
       const topic = tipo === "condominio" || !casaNumero
-        ? `condo_${condominio}`
-        : `prop_${condominio}_${casaNumero}`;
+        ? safeTopic(`condo_${condominio}`)
+        : safeTopic(`prop_${condominio}_${casaNumero}`);
 
       const color = prioridad === "alta" || prioridad === "urgente" ? "#F44336" : "#2196F3";
 
@@ -90,7 +97,7 @@ export const onLogCreate = onDocumentCreated(
       });
 
       await messaging().send({
-        topic: `prop_${data.condominio}_${data.casaNumero}`,
+        topic: safeTopic(`prop_${data.condominio}_${data.casaNumero}`),
         notification: {
           title: "Visita en tu casa",
           body: `${data.invitadoNombre ?? "Visita"} ha ingresado a las ${hora}`,
@@ -126,7 +133,7 @@ export const onRequestUpdate = onDocumentUpdated(
         ? "Tu solicitud de acceso ha sido aprobada. Ya puedes descargar tu QR."
         : "Tu solicitud de acceso ha sido rechazada.";
 
-      const topic = after.codigoQr ? `qr_${after.codigoQr}` : `visitor_${after.ci}`;
+      const topic = safeTopic(after.codigoQr ? `qr_${after.codigoQr}` : `visitor_${after.ci}`);
 
       await messaging().send({
         topic,
@@ -164,7 +171,7 @@ export const onQrUpdate = onDocumentUpdated(
     if (after.estado === "expirado" || after.estado === "sinUsos") {
       try {
         await messaging().send({
-          topic: `qr_${after.codigo}`,
+          topic: safeTopic(`qr_${after.codigo}`),
           notification: {
             title: "QR expirado",
             body: after.estado === "expirado"
