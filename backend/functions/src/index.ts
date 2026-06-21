@@ -1,5 +1,6 @@
 // =============================================================================
 // FortGuards - Cloud Functions entry point
+// deploy-bump: rebind Firestore triggers a la base (default) nam5 (2026-06)
 // =============================================================================
 import { initializeApp, getApps } from "firebase-admin/app";
 import { setGlobalOptions } from "firebase-functions/v2";

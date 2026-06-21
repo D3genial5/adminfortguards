@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import '../core/app_log.dart';
@@ -103,6 +104,11 @@ class AuthService {
           password: password,
         );
         if (credential.user != null) {
+          // Asegura que el custom claim (superadmin/admin) esté seteado y en el
+          // token. No dependemos del trigger syncAdminClaims (que puede no
+          // dispararse en bases recién creadas): refreshMyClaims lo setea
+          // server-side desde el doc, y forzamos refresh del token.
+          await _sincronizarClaims(credential.user!);
           return await _getAdminData(credential.user!.uid, email);
         }
       } on FirebaseAuthException catch (e) {
@@ -171,6 +177,20 @@ class AuthService {
     } catch (e) {
       AppLog.log('Error en login admin', error: e);
       return null;
+    }
+  }
+
+  /// Llama a la Cloud Function refreshMyClaims (setea el custom claim
+  /// role/condominio desde el doc del usuario) y fuerza refresh del ID token
+  /// para que el claim quede disponible en esta sesión. No bloquea el login si
+  /// falla (ej. red): el claim puede sincronizarse en el próximo intento.
+  static Future<void> _sincronizarClaims(User user) async {
+    try {
+      final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+      await functions.httpsCallable('refreshMyClaims').call();
+      await user.getIdToken(true); // refresca el token con el claim nuevo
+    } catch (e) {
+      AppLog.log('No se pudo sincronizar claims (no bloquea login)', error: e);
     }
   }
 
@@ -252,6 +272,7 @@ class AuthService {
           password: password,
         );
         if (credential.user != null) {
+          await _sincronizarClaims(credential.user!);
           return await _getGuardiaData(email);
         }
       } on FirebaseAuthException catch (e) {

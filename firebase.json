@@ -1,0 +1,1 @@
+{"flutter":{"platforms":{"android":{"default":{"projectId":"fortguards-prod","appId":"1:681753776306:android:aa072fd9857bbf7fac39ab","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"fortguards-prod","configurations":{"android":"1:681753776306:android:aa072fd9857bbf7fac39ab","ios":"1:681753776306:ios:b1c8f956fe779afeac39ab"}}}}}}

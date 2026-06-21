@@ -3,7 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class AlertaModel {
   final String id;
   final String tipo; // 'ambulancia' | 'incendio' | 'alerta' | 'ayuda'
-  final int casaNumero;
+  // Identificador de casa: puede ser texto ("Acacia 1") o número.
+  final String casaNumero;
   final String condominio;
   final String propietarioId;
   final String propietarioNombre;
@@ -33,7 +34,7 @@ class AlertaModel {
     return AlertaModel(
       id: id,
       tipo: (data['tipo'] as String?) ?? 'alerta',
-      casaNumero: (data['casaNumero'] as num?)?.toInt() ?? 0,
+      casaNumero: data['casaNumero']?.toString() ?? '',
       condominio: (data['condominio'] as String?) ?? '',
       propietarioId: (data['propietarioId'] as String?) ?? '',
       propietarioNombre: (data['propietarioNombre'] as String?) ?? '',
@@ -103,7 +104,7 @@ class AlertaModel {
   AlertaModel copyWith({
     String? id,
     String? tipo,
-    int? casaNumero,
+    String? casaNumero,
     String? condominio,
     String? propietarioId,
     String? propietarioNombre,

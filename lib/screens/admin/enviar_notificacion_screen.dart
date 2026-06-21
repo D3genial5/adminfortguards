@@ -86,32 +86,19 @@ class _EnviarNotificacionScreenState extends State<EnviarNotificacionScreen> {
           );
         }
       } else if (_tipoDestinatario == 'casa' || _tipoDestinatario == 'multiple') {
-        // Enviar a casas específicas
+        // Enviar a casas específicas: se escribe el doc en `notificaciones`
+        // (la app del propietario escucha por condominio+casaNumero) y el
+        // trigger onNotificacionCreada dispara el push al topic prop_<condo>_<casa>.
         for (final numero in _casasSeleccionadas) {
-          // Buscar el usuario de esa casa
-          final credencialQuery = await FirebaseFirestore.instance
-              .collection('credenciales')
-              .where('condominio', isEqualTo: widget.condominioId)
-              .where('casa', isEqualTo: numero)
-              .where('tipo', isEqualTo: 'propietario')
-              .limit(1)
-              .get();
-          
-          if (credencialQuery.docs.isNotEmpty) {
-            final userId = credencialQuery.docs.first.id;
-            
-            await _notificationService.sendNotificationToUser(
-              userId: userId,
-              title: titulo,
-              body: mensaje,
-              data: {
-                'tipo': 'privada',
-                'condominioId': widget.condominioId,
-                'casa': numero,
-                'timestamp': DateTime.now().toIso8601String(),
-              },
-            );
-          }
+          await FirebaseFirestore.instance.collection('notificaciones').add({
+            'condominio': widget.condominioId,
+            'casaNumero': numero,
+            'titulo': titulo,
+            'mensaje': mensaje,
+            'tipo': 'privada',
+            'visto': false,
+            'fecha': FieldValue.serverTimestamp(),
+          });
         }
         
         if (mounted) {

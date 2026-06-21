@@ -144,7 +144,13 @@ service cloud.firestore {
     // administradores
     // ==================================================================
     match /administradores/{adminId} {
-      allow read   : if uid() == adminId || isSuper();
+      // Lectura: el propio admin por ID, super-admin (lista completa), o el
+      // dueño por email — necesario para el login (la app consulta
+      // `where email == <miEmail>`) y como bootstrap del primer super-admin
+      // antes de que su claim propague. Solo devuelve TU propio doc.
+      allow read   : if uid() == adminId
+                      || isSuper()
+                      || (isAuth() && request.auth.token.email == resource.data.email);
       allow create : if isSuper();
       allow delete : if isSuper();
       // El propio admin actualiza su perfil (sin tocar password/role/condominio)
