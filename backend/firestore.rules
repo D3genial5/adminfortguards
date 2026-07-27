@@ -205,13 +205,15 @@ service cloud.firestore {
 
       // Update: propietario aprueba/rechaza, guardia marca entrada, visitante cancela
       allow update : if isAuth() && (
-                          // Propietario de la casa: aprueba/rechaza + setea QR
+                          // Propietario de la casa: aprueba/rechaza + setea QR +
+                          // modifica el acceso ya otorgado (usos, vigencia).
                           (isPropietario() && condo() == resource.data.condominio
                               && casaIdT() == string(resource.data.casaNumero)
                               && onlyChanges(['estado','fechaAprobacion','codigoQr',
                                               'tipoAcceso','usosRestantes','codigoUsos',
                                               'fechaExpiracion','duracionValor','duracionUnidad',
-                                              'qrPayload','qrSignature']))
+                                              'qrPayload','qrSignature','actualizadoEn',
+                                              'revocado','fechaRevocacion','motivoRechazo']))
                           // Guardia: marca entrada verificada y decrementa usos
                           || (isGuardiaOf(resource.data.condominio)
                               && onlyChanges(['entradaVerificada','fechaEntrada',
@@ -223,7 +225,13 @@ service cloud.firestore {
                               && onlyChanges(['cancelado','fechaCancelacion']))
                         );
 
-      allow delete : if isAdminOf(resource.data.condominio) || isSuper();
+      // Delete: admin/super, y el propietario de la casa (remover un invitado
+      // que ya habia aceptado es una accion legitima del dueno de casa).
+      allow delete : if isAdminOf(resource.data.condominio)
+                      || isSuper()
+                      || (isPropietario()
+                          && condo() == resource.data.condominio
+                          && casaIdT() == string(resource.data.casaNumero));
     }
 
     // ==================================================================
