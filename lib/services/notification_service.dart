@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -85,6 +86,20 @@ class NotificationService {
   // Obtener y guardar token FCM
   Future<void> _getAndSaveToken() async {
     try {
+      // En iOS, FCM no entrega el token hasta que APNs registró el dispositivo.
+      // Si se pide antes, getToken() lanza una excepción. Si APNs aún no
+      // responde, onTokenRefresh guardará el token cuando llegue.
+      if (Platform.isIOS) {
+        var apnsToken = await _fcm.getAPNSToken();
+        for (var intento = 0; apnsToken == null && intento < 5; intento++) {
+          await Future.delayed(const Duration(seconds: 1));
+          apnsToken = await _fcm.getAPNSToken();
+        }
+        if (apnsToken == null) {
+          if (kDebugMode) debugPrint('⚠️ APNs aún no entrega token; se reintentará');
+          return;
+        }
+      }
       _currentToken = await _fcm.getToken();
       if (_currentToken != null) {
         await _saveToken(_currentToken!);
