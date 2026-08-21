@@ -50,7 +50,7 @@ dependencies:
   flutter_local_notifications: ^17.2.3
   flutter_secure_storage: ^9.2.4
   device_info_plus: ^10.1.0
-  intl: ^0.19.0
+  intl: ^0.20.3
   url_launcher: ^6.3.0
 
 dev_dependencies:
@@ -70,6 +70,7 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/icon/app_icon.png"
+  # iOS no admite transparencia en el icono: App Store Connect rechaza la subida.
   min_sdk_android: 21
   adaptive_icon_background: "#000000"
   adaptive_icon_foreground: "assets/icon/app_icon.png"

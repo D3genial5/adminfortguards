@@ -134,7 +134,7 @@ class ThemeService extends ChangeNotifier {
       ),
 
       // Cards
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         shadowColor: Colors.black.withValues(alpha: 0.06),
         color: _surface,
@@ -276,7 +276,7 @@ class ThemeService extends ChangeNotifier {
       ),
 
       // Dialog Theme
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: _surface,
         elevation: 4,
         shadowColor: Colors.black.withValues(alpha: 0.15),
@@ -312,7 +312,7 @@ class ThemeService extends ChangeNotifier {
       ),
 
       // Tab Bar Theme
-      tabBarTheme: const TabBarTheme(
+      tabBarTheme: const TabBarThemeData(
         labelColor: _primary,
         unselectedLabelColor: _textMuted,
         indicatorColor: _primary,
